@@ -1,3 +1,7 @@
+<existing_system>
+$existing
+</existing_system>
+
 <spec>
 $spec
 </spec>
@@ -18,7 +22,11 @@ $dependencies
 $feedback
 </review_feedback>
 
-Design the service for the MVP requirements:
+Design the service for the MVP requirements. For a change to an existing service, extend the
+existing design: keep existing endpoints, fields and tables backward compatible, and make
+openapi_yaml describe the COMPLETE service (existing plus new endpoints); schema_sql contains the
+complete schema using CREATE TABLE IF NOT EXISTS plus any additive changes.
+
 1. modules: components/packages with their responsibility and the requirement IDs they implement.
 2. openapi_yaml: a complete OpenAPI 3.0.3 document in YAML for every business endpoint: paths,
    parameters, request/response schemas, and every status code each operation can return.

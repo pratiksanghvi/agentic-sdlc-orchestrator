@@ -13,6 +13,7 @@ from orchestrator.stages.common import (
     END_RUN,
     StageIO,
     ask_choice,
+    existing_system,
     llm_step,
     option,
     prompt,
@@ -31,6 +32,12 @@ class DesignState(StageIO, total=False):
     design_attempts: int
     problems: list[str]
     next_step: str
+
+
+def _existing_stack(ctx, state) -> str | None:
+    if "codebase_analysis" not in state.get("artifacts", {}):
+        return None
+    return ctx.store.read_json(ref_of(state, "codebase_analysis"), "analysis.json")["stack"]
 
 
 def _spec(ctx, state) -> dict:
@@ -62,10 +69,11 @@ def d2_stack(state: DesignState) -> dict[str, Any]:
     result = llm_step(
         ctx, stage=STAGE, node="D2_stack", purpose="design.stack",
         system=prompt(STAGE, "system"),
-        user=prompt(STAGE, "stack", spec=to_json(spec), stacks=_stacks_text(ctx, spec),
+        user=prompt(STAGE, "stack", existing=existing_system(ctx, state), spec=to_json(spec),
+                    stacks=_stacks_text(ctx, spec),
                     feedback=state.get("stack_feedback") or "none"),
         schema=StackDecision,
-        validate=lambda d: rules.validate_stack(d, ctx.config, spec),
+        validate=lambda d: rules.validate_stack(d, ctx.config, spec, _existing_stack(ctx, state)),
     )
     decision = result.value.model_dump()
     chosen = decision["recommended_stack_id"]
@@ -87,7 +95,8 @@ def stack_gate(state: DesignState) -> dict[str, Any]:
     data = ctx.store.read_json(ref, "stack.json")
     chosen = data["chosen_stack"]
     missing = rules.stacks_for_spec(ctx.config, _spec(ctx, state))
-    alternatives = [sid for sid in ctx.config.stacks.stacks if sid != chosen and not missing[sid]]
+    alternatives = [sid for sid in ctx.config.stacks.stacks if sid != chosen and not missing[sid]
+                    and _existing_stack(ctx, state) is None]  # brownfield keeps its stack
     def _label(sid: str) -> str:
         return "" if ctx.config.stacks.stacks[sid].validated else " (not validated end-to-end)"
 
@@ -155,7 +164,7 @@ def d4_architecture(state: DesignState) -> dict[str, Any]:
     result = llm_step(
         ctx, stage=STAGE, node="D4_architecture", purpose="design.architecture",
         system=prompt(STAGE, "system"),
-        user=prompt(STAGE, "architecture", spec=to_json(spec),
+        user=prompt(STAGE, "architecture", existing=existing_system(ctx, state), spec=to_json(spec),
                     stack=f"{stack_id} (language {stack.language}, datastore {stack.datastore})",
                     nfr_plan=to_json(plan), dependencies="\n".join(sorted(allowed)),
                     feedback=state.get("design_feedback") or "none"),

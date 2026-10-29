@@ -22,9 +22,12 @@ def stacks_for_spec(config: Config, spec: dict) -> dict[str, list[str]]:
     }
 
 
-def validate_stack(decision, config: Config, spec: dict) -> list[str]:
+def validate_stack(decision, config: Config, spec: dict,
+                   existing: str | None = None) -> list[str]:
     missing = stacks_for_spec(config, spec)
     sid = decision.recommended_stack_id
+    if existing and sid != existing:
+        return [f"this is a change to an existing {existing} service; keep that stack"]
     if sid not in config.stacks.stacks:
         return [f"recommended_stack_id {sid!r} is not one of {sorted(config.stacks.stacks)}"]
     if missing[sid]:

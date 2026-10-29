@@ -40,6 +40,12 @@ from orchestrator.stages.common import (
 from orchestrator.testkit import generator
 
 STAGE = "implementation"
+SCAFFOLD_RULE = ("- T-1 scaffolds the project: build file, application entry point with the "
+                 "startup contract,\n  configuration, and the SQLite schema. It must compile on "
+                 "its own.")
+BROWNFIELD_RULE = ("- The project already exists (see file_tree): do NOT re-scaffold. Modify "
+                   "existing files and add new\n  ones; keep existing behavior and existing tests "
+                   "passing.")
 MAX_CONTEXT_CHARS = 120_000
 
 
@@ -152,6 +158,8 @@ def i0_rollback_question(state: ImplementationState) -> dict[str, Any]:
     ctx = get_context(state["run_id"])
     ctx.approvals.require_approved(*(ref_of(state, t) for t in
                                      ("spec", "stack_adr", "design", "test_plan")))
+    if state.get("mode") == "brownfield" and not state.get("workspace"):
+        raise ValueError("brownfield run without a workspace")
     opt_in = ask_confirm("rollback_opt_in", "A backup is taken before implementation. If "
                          "verification fails and you end the run, roll back to it?")
     return {"rollback_opt_in": bool(opt_in)}
@@ -161,7 +169,8 @@ def i0_rollback_question(state: ImplementationState) -> dict[str, Any]:
 def i0_setup(state: ImplementationState) -> dict[str, Any]:
     ctx = get_context(state["run_id"])
     spec = ctx.store.read_json(ref_of(state, "spec"), "spec.json")
-    ws = ctx.root / "workspaces" / _slug(spec["title"])
+    ws = Path(state["workspace"]) if state.get("workspace") else \
+        ctx.root / "workspaces" / _slug(spec["title"])
     repo = ProductRepo(ws)
     repo.ensure()
     tag = repo.backup(ctx.run_id)
@@ -192,9 +201,12 @@ def _validate_plan(plan: TaskPlan, stack) -> list[str]:
 def i1_plan(state: ImplementationState) -> dict[str, Any]:
     ctx = get_context(state["run_id"])
     _, stack = _stack(ctx, state)
+    tree = "\n".join(_tree(Path(state["workspace"])))
     result = llm_step(
         ctx, stage=STAGE, node="I1_plan", purpose="implementation.plan", role="coding",
-        system=_system(ctx, state), user=prompt(STAGE, "plan", **_design_inputs(ctx, state)),
+        system=_system(ctx, state),
+        user=prompt(STAGE, "plan", **_design_inputs(ctx, state), tree=tree or "empty",
+                    scaffold_rule=SCAFFOLD_RULE if not tree else BROWNFIELD_RULE),
         schema=TaskPlan, validate=lambda p: _validate_plan(p, stack), effort="medium",
     )
     tasks = [t.model_dump() for t in result.value.tasks]

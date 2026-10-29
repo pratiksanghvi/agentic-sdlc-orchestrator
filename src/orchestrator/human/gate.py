@@ -101,6 +101,10 @@ class HumanGate:
         self._log(gate, title, summary, options, artifact, option.key, reason, started)
         return Decision(option.key, reason)
 
+    def notice(self, gate: str, title: str, body: str) -> None:
+        self.io.show(title, body)
+        self._log(gate, title, body, [], None, "shown", "", time.monotonic())
+
     def confirm(self, gate: str, question: str) -> bool:
         started = time.monotonic()
         result = self._yes_no(question)

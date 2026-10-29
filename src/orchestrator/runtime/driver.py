@@ -34,6 +34,9 @@ def answer_interrupt(ctx: RunContext, payload: dict[str, Any]) -> Any:
                 raw = q["options"][int(raw) - 1]
             answers.append({"id": q["id"], "answer": raw})
         return answers
+    if kind == "notice":
+        gate.notice(payload["gate"], payload["title"], payload["body"])
+        return True
     if kind == "confirm":
         return gate.confirm(payload["gate"], payload["question"])
     raise ValueError(f"unknown interrupt kind: {kind}")

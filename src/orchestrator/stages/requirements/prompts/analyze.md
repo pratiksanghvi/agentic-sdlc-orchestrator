@@ -1,3 +1,7 @@
+<existing_system>
+$existing
+</existing_system>
+
 <requirement>
 $requirement
 </requirement>
@@ -6,7 +10,11 @@ $requirement
 $clarifications
 </clarifications>
 
-Analyze the requirement:
+Analyze the requirement. If <existing_system> describes an existing service, the requirement is a
+change to it: capture only the new or changed behavior, and add a need to keep existing behavior
+working only if the user asked for it or it is listed as a compatibility risk.
+
+Steps:
 1. State the core intent in one sentence.
 2. List the functional needs the user stated (with exact source quotes). Include needs settled by
    clarification answers.

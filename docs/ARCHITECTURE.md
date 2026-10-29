@@ -37,14 +37,14 @@ Every design item below carries a status so reviewers can see exactly what is bu
 
 | Concern | Choice | Status |
 |---|---|---|
-| Orchestration | Python 3.12 + **LangGraph** (stateful graph, subgraphs, parallel branches, `interrupt()` human gates, SQLite checkpointer) | 🔨 M1+ |
+| Orchestration | Python 3.12 + **LangGraph** (stateful graph, subgraphs, parallel branches, `interrupt()` human gates, SQLite checkpointer) | ✅ M1+ |
 | LLM | Anthropic Claude via official Python SDK (streaming) — `claude-opus-5-5` (reasoning stages + fallback), `claude-sonnet-5-5` (code generation); configurable | ✅ M1 |
 | Structured output | `output_config.format` JSON schema generated from Pydantic models (objects closed, all fields required, value constraints enforced afterwards by Pydantic + semantic validators). Forced `tool_choice` is not supported on current models, so schema-constrained output is used instead | ✅ M1 |
 | Config validation | Pydantic models for every config file | ✅ M0 |
-| Console UI | `rich` | ✅ M1 (gates); live view 🔨 M8 |
-| Secret scanning | `detect-secrets` (pip) | 🔨 M1/M7 |
-| Generated service stacks | Java 21 + Spring Boot 3 + Maven + SQLite (**validated**); Python/FastAPI and Go/chi configured | Java 🔨 M5–M6; Python/Go ✂️ |
-| Acceptance tests | Black-box **pytest + httpx** against the running service (stack-agnostic) | 🔨 M5–M6 |
+| Console UI | `rich` | ✅ M1 (gates, notices); live progress view 🔭 |
+| Secret scanning | `detect-secrets` (pip) | ✅ M2/M5/M7 |
+| Generated service stacks | Java 21 + Spring Boot 3 + Maven + SQLite (**validated**); Python/FastAPI and Go/chi configured | Java ✅ M5–M6; Python/Go ✂️ |
+| Acceptance tests | Black-box **pytest + httpx** against the running service (stack-agnostic) | ✅ M5–M6 |
 
 ## 3. Configuration and guardrail files
 
@@ -86,10 +86,10 @@ Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2** (✅ M4, joine
 | Stack approval (after D2) | approve / choose another supported stack (stacks lacking a catalog implementation for a requested NFR are hidden; unvalidated stacks are labelled) / reject + feedback / end run | ✅ M3 |
 | D6 Design approval | approve / reject + feedback → D4 / change the stack decision → D2 / end run | ✅ M3 (edit ✂️) |
 | T4 Test-plan approval | approve / reject + feedback / end run | ✅ M4 (modify/remove/suggest ✂️) |
-| Pre-implementation | "Roll back to pre-implementation version if verify fails? [y/N]" | 🔨 M5 |
-| Stage 5 escalation | implementation hint / end run (with rollback confirmation) — unlimited tries, one fix + one verify per hint | 🔨 M6 (test-case change ✂️) |
-| Stage 6 missing tool | proceed without the check / stop | 🔨 M7 |
-| Stage 8 final verdict | accept / reject → restart from Requirements, Design or Test Design / end run | 🔨 M8 |
+| Pre-implementation | "Roll back to pre-implementation version if verify fails? [y/N]" | ✅ M5 |
+| Stage 5 escalation | implementation hint / end run (with rollback confirmation) — unlimited tries, one fix + one verify per hint; after an all-pass hinted try the human confirms moving on | ✅ M6 (test-case change ✂️) |
+| Stage 6 report | shown as a notice (logged); the run continues | ✅ M7 |
+| Stage 8 final verdict | accept / reject → restart from Requirements, Design or Test Design / end run | ✅ M8 |
 | Cost ceiling | "Run has used $X. Continue? [y/N]" at each multiple of `budgets.cost_usd_confirm` ($5) | ✅ M1 |
 
 ---
@@ -151,17 +151,19 @@ Implementation: `stages/test_design/`, `contract/openapi.py`. A test case is a l
 
 ### Stage 4 — Implementation (4a ‖ 4b)
 
-Before Stage 4: a backup is **always** taken (git tag `pre-impl/<run_id>` on the product repo) and the user is asked once whether to roll back on failure. 🔨 M5
+Before Stage 4: a backup is **always** taken (git tag `pre-impl/<run_id>` on the product repo) and the user is asked once whether to roll back on failure. ✅ M5
+
+Implementation: `stages/implementation/`, `execution/` (clean-env runner, service process, product-repo git), `guardrails/code.py`, `testkit/`.
 
 | Step | Type | Behavior | Status |
 |---|---|---|---|
-| I1 Plan | LLM (Sonnet) | 3–10 tasks with goal, files, `depends_on`, traces, done criteria; each catalog NFR is its own task; first task scaffolds the project | 🔨 M5 |
-| I2 Validate plan | code | DAG acyclic; every design component covered; files within path allowlist | 🔨 M5 |
-| I4 Execute tasks | LLM per task, **sequential** | Complete files via a write tool; only dependent files in context; unit tests in the product's language | 🔨 M5 |
-| Guardrails after each task | code | Path allowlist; no access to acceptance tests; dependency allowlist (parsed from `pom.xml`); detect-secrets; startup contract present; no suppression comments | 🔨 M5 |
-| Compile + checkpoint | code | Stack compile command; commit per task on branch `run/<run_id>` | 🔨 M5 |
-| Retry / fallback | governed | 2 retries with errors fed back → 1 attempt on the stronger model → roll back to last checkpoint + report to human | 🔨 M5 |
-| 4b Test code | LLM (Sonnet) | pytest + httpx, one `test_<tc_id>` per approved case; `BASE_URL` from env; no product source access; code check that every case has a function and collection succeeds; freeze + hash | 🔨 M5 |
+| I1 Plan | LLM (Sonnet) | 3–10 tasks with goal, files, `depends_on`, traces, done criteria; each catalog NFR is its own task; first task scaffolds the project | ✅ M5 |
+| I2 Validate plan | code | DAG acyclic; every design component covered; files within path allowlist | ✅ M5 |
+| I4 Execute tasks | LLM per task, **sequential** | Complete files via a write tool; only dependent files in context; unit tests in the product's language | ✅ M5 |
+| Guardrails after each task | code | Path allowlist; no access to acceptance tests; dependency allowlist (parsed from `pom.xml`); detect-secrets; startup contract present; no suppression comments | ✅ M5 |
+| Compile + checkpoint | code | Stack compile command; commit per task on branch `run/<run_id>` | ✅ M5 |
+| Retry / fallback | governed | 2 retries with errors fed back → 1 attempt on the stronger model → roll back to last checkpoint + report to human | ✅ M5 |
+| 4b Acceptance suite | **code (deterministic)** | Design change: because the approved test plan is fully structured, the suite is generated by code instead of an LLM — one `test_<tc_id>` per approved case running the case's HTTP steps through a small `httpx` runtime. Nothing can be added, weakened or skipped between approval and execution, and it costs no tokens. Collection is checked (`pytest --collect-only`), then the suite is frozen as an artifact and its hash re-checked before every run | ✅ M5 |
 | Parallel task execution | | | 🔭 |
 
 No human intervention in Stage 4.
@@ -172,22 +174,22 @@ No human intervention in Stage 4.
 
 | Step | Behavior | Status |
 |---|---|---|
-| V1 Entry | 4a and 4b joined; acceptance-suite hash unchanged (else safe-stop) | 🔨 M6 |
-| V2 Build + unit tests | Stack `build_and_unit_test` command | 🔨 M6 |
-| V3 Start | Clean child environment (only `PORT`, DB path; **never the API key**); read stdout line by line; `SERVICE_READY` + TCP connect = started; process exit or error pattern = failed; 90 s timeout | 🔨 M6 |
-| V4 Acceptance | Run the frozen suite with `BASE_URL`; JUnit XML; stop the service. **Skipped entirely if build or startup failed** | 🔨 M6 |
-| V5 Evidence | AC → TC → pass/fail, build/unit results, startup time, fix history, MTTR | 🔨 M6 |
-| V6 Fix | Shared budget of **3** automatic attempts across build, unit, startup and acceptance; product code only (tests frozen); diagnosis + fix; commit `fix attempt n` | 🔨 M6 |
-| Escalation | Unlimited human tries: each hint → one fix → one verify → report; on all-pass the human confirms moving on; end run → confirm rollback → restore backup and show message | 🔨 M6 |
+| V1 Entry | 4a and 4b joined; acceptance-suite hash unchanged (else safe-stop) | ✅ M6 |
+| V2 Build + unit tests | Stack `build_and_unit_test` command | ✅ M6 |
+| V3 Start | Clean child environment (only `PORT`, `DB_PATH`; **never the API key**); read stdout line by line; `SERVICE_READY` on the assigned port + TCP connect = started; process exit = failed fast; 90 s timeout. Design change: lines matching the error pattern are reported but do not fail the start on their own (frameworks log benign `ERROR`/`Exception` text) | ✅ M6 |
+| V4 Acceptance | Run the frozen suite with `BASE_URL`; JUnit XML; stop the service. Phase `main` first, then phase `isolated` (rate-limit cases) against a fresh service and database. **Skipped entirely if build or startup failed** | ✅ M6 |
+| V5 Evidence | AC → TC → pass/fail, build/unit results, startup time, fix history, MTTR | ✅ M6 |
+| V6 Fix | Shared budget of **3** automatic attempts across build, unit, startup and acceptance; product code only (tests frozen); diagnosis + fix; commit `fix attempt n` | ✅ M6 |
+| Escalation | Unlimited human tries: each hint → one fix → one verify → report; on all-pass the human confirms moving on; end run → confirm rollback → restore backup and show message | ✅ M6 |
 | Advisory `suspected_cause` (IMPLEMENTATION / TEST / DESIGN / REQUIREMENT) in the diagnosis | | ⏸️ |
 
 ### Stage 6 — Policy & Security (report only)
 
 | Check | Tool | Status |
 |---|---|---|
-| S1 Secrets | detect-secrets | 🔨 M7 |
+| S1 Secrets | detect-secrets | ✅ M7 |
 | S2 Code security (SAST) | Semgrep (pip) | ✂️ |
-| S4 Change control | own code: approvals' hashes match current artifacts, commits trace to task/fix/run, path + dependency allowlists, acceptance-suite hash | 🔨 M7 |
+| S4 Change control | own code: approvals' hashes match current artifacts, every commit on `run/<id>` references the run, changed paths within the allowlist, dependency allowlist, acceptance-suite hash. S1 ‖ S4 run in parallel and join into the report | ✅ M7 |
 | S3 Dependency CVEs (OSV-Scanner), gitleaks, license scan | external binaries | 🔭 |
 | Automatic fixing of findings, false-positive waivers | | 🔭 |
 
@@ -197,19 +199,19 @@ The report is shown for awareness; the run continues automatically. If a scanner
 
 | Item | Status |
 |---|---|
-| DC1 assemble facts from approved artifacts + real commands + results | 🔨 M7 |
-| DC2 generate `README.md` and `docs/API.md` for the generated service | 🔨 M7 |
+| DC1 assemble facts from approved artifacts + real commands + results | ✅ M7 |
+| DC2 generate `README.md` and `docs/API.md` for the generated service | ✅ M7 |
 | DC2 `docs/ARCHITECTURE.md` and `CHANGELOG.md` for the generated service | ✂️ |
-| DC3 validate: README commands == stack commands; every OpenAPI endpoint in API.md and none extra; links resolve; no TODOs; no secrets; max 2 retries, leftovers become warnings | 🔨 M7 |
+| DC3 validate: README commands == stack commands; every OpenAPI endpoint in API.md and none extra; links resolve; no TODOs; no secrets; max 2 retries, leftovers become warnings | ✅ M7 |
 
 ### Stage 8 — Release readiness and final verdict
 
 | Item | Status |
 |---|---|
-| RR1 readiness checklist (informational) ‖ RR2 run metrics | 🔨 M8 |
-| RR3 engineering summary — generated by code from the event log (plan, artifacts, validation, assumptions, limitations, unsupported requests, decision lineage, metrics) | 🔨 M8 |
+| RR1 readiness checklist (informational) ‖ RR2 run metrics | ✅ M8 |
+| RR3 engineering summary — generated by code from the event log (plan, artifacts, validation, assumptions, limitations, unsupported requests, decision lineage, metrics) | ✅ M8 |
 | RR3 summary written by the model + RR4 facts-only validation | ✂️ |
-| RR5 verdict: ACCEPT → merge `run/<id>` into `master` + incremental version tag (`v0.1.0`, `v0.2.0`, …); REJECT → choose restart stage; END → branch kept as `failed/<id>` | 🔨 M8 |
+| RR5 verdict: ACCEPT → merge `run/<id>` into `master` + incremental version tag (`v0.1.0`, `v0.2.0`, …); REJECT → choose restart stage; END → branch kept as `failed/<id>` | ✅ M8 |
 | Container image / deployment | 🔭 |
 
 ---
@@ -222,14 +224,15 @@ The report is shown for awareness; the run continues automatically. If a scanner
 * **F2 Approvals bound to hashes.** An approval records gate, artifact type, version, hash, approver, time. A stage's entry check re-hashes its inputs and requires a matching approval.
 * **F3 Restartable stage contracts.** Each stage is a LangGraph subgraph declaring `requires` and `produces`; it reads only approved artifacts via the store and writes only its own outputs; its scratch state is discarded on exit. This makes every stage independently testable and restartable.
 
-### 6.2 Observability — choke points, records, hash chain ✅ M1; metrics + views 🔨 M8
+### 6.2 Observability — choke points, records, hash chain ✅ M1; metrics + views ✅ M8
 
 * Implementation: `observability/eventlog.py`, `llm/client.py`, `llm/backends.py`, `human/gate.py`, `observability/node.py`, `artifacts/store.py`, `artifacts/approvals.py`, `runtime/context.py`.
 * **Single choke points:** `TracedAnthropicClient` (only way to call Claude), `HumanGate` (only way to prompt the user), `@observed_node` (every graph step). Tests enforce logged-call count == actual calls.
 * **Records:** LLM call (full system prompt + messages, full response, stop reason, input/output/cache tokens, latency, estimated cost, request ID, schema-retry flag); human interaction (what was shown, options, verbatim answer, response wait); event (node start/finish, input/output hashes, retries, fixes, rollbacks, pause/resume, guardrail violations, re-plans); decision (type, made by human or agent, rationale, basis = LLM call IDs + input hashes).
 * **Storage:** append-only JSONL, full prompts/responses inline; each line carries the hash of the previous line (tamper-evident; `verify-log`). API key never logged; run logs are gitignored.
 * **Metrics:** run success rate (ACCEPT ÷ finished runs), first-pass success per stage, retry / fix / rollback frequency, MTTR (total and automatic-only), end-to-end time split into agent / tool / human-wait, tokens + cost per step/stage/run, LLM latency p50/p95, gate approve/reject counts, schema-retry rate.
-* **Views:** live `rich` progress, `trace <run_id>`, `metrics`, `verify-log <run_id>` 🔨; `explain <decision_id>` ✂️.
+* **Views:** `trace <run_id>` (timeline), `metrics [run_id]` (one run or totals across runs), `verify-log <run_id>` ✅ M8; live `rich` progress view 🔭; `explain <decision_id>` ✂️.
+* Implementation: `observability/metrics.py` (all metrics derived from the audit log only).
 * LangFuse / OpenTelemetry / Grafana 🔭.
 
 ### 6.3 Guardrails
@@ -238,19 +241,19 @@ The report is shown for awareness; the run continues automatically. If a scanner
 |---|---|---|
 | Input size, secret/PII scan, untrusted-data framing in prompts | R1, all prompts | ✅ M2 |
 | Schema validation of every model output + bounded schema retries (truncated output retried with doubled `max_tokens`) | LLM client | ✅ M1 |
-| Stack allowlist, catalog-only NFRs, `source_quote` check, SQLite only | R5, D2, D3 | 🔨 M2–M3 |
-| Path allowlist, forbidden acceptance-test paths, startup contract, no suppression comments | Stage 4 | 🔨 M5 |
-| Versioned dependency allowlist per stack | Stage 4 | 🔨 M5 |
-| Only commands from `stacks.yaml` may run; timeouts; run inside the workspace | execution | 🔨 M5–M6 |
-| Clean child environment for generated code (no API key / secrets) | execution | 🔨 M6 |
+| Stack allowlist, catalog-only NFRs, `source_quote` check, SQLite only | R5, D2, D3 | ✅ M2–M3 |
+| Path allowlist, forbidden paths, startup contract (checked after the last task; one automatic contract task if missing), no suppression comments | Stage 4 | ✅ M5 |
+| Versioned dependency allowlist per stack | Stage 4 | ✅ M5 |
+| Only commands from `stacks.yaml` may run; timeouts; run inside the workspace | execution | ✅ M5–M6 |
+| Clean child environment for generated code (no API key / secrets) | execution | ✅ M6 |
 | Cost ceiling with human confirmation (asked at every multiple of the ceiling) | runtime | ✅ M1 |
-| Step retry budgets + stronger-model fallback | stages | 🔨 M2+ |
+| Step retry budgets + stronger-model fallback | stages | ✅ M2+ |
 | Approvals bound to hashes; governance file hashes per run | change control | ✅ M1 |
 | OS/container sandbox for generated code | | 🔭 |
 
 **Limitation:** generated code runs on the host. Command allowlisting and a clean environment reduce risk but are not process isolation.
 
-### 6.4 Git model for the generated product — 🔨 M5/M8
+### 6.4 Git model for the generated product — ✅ M5/M8
 
 The generated product lives in its own git repository under `workspaces/<name>/`, separate from this repo. Each run works on `run/<run_id>`; only human-accepted runs are merged to `master` and tagged; failed runs are kept as `failed/<run_id>` for audit. Per-task and per-fix commits carry run and task IDs.
 
@@ -258,8 +261,8 @@ The generated product lives in its own git repository under `workspaces/<name>/`
 
 | Item | Status |
 |---|---|
-| Gate reject loops back to the producing step with feedback | 🔨 M2–M4 |
-| Final REJECT → user picks restart stage; downstream re-runs on new versions with fresh approvals | 🔨 M8 |
+| Gate reject loops back to the producing step with feedback | ✅ M2–M4 |
+| Final REJECT → user picks restart stage; downstream re-runs on new versions with fresh approvals (feedback carry-forward ⏸️) | ✅ M8 |
 | Detection of edits made outside the orchestrator (re-approve or discard) | ⏸️ |
 | NEW_REQUIREMENT routing from test suggestions; carrying rejected ideas across re-plans; counting re-plans in metrics | ⏸️ |
 | Principle: agents never re-plan autonomously | ⏸️ (proposed) |

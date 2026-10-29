@@ -92,14 +92,15 @@ def run_step(client: httpx.Client, step: dict[str, Any], variables: dict[str, An
     except ValueError:
         payload, is_json = None, False
     for a in step.get("body_assertions", []):
+        expected = _substitute(a["value"], variables)
         if a["target"] == "$body":
-            _check(a["op"], True, response.text, a["value"], f"{step['name']} body")
+            _check(a["op"], True, response.text, expected, f"{step['name']} body")
         else:
             found, value = json_path(payload, a["target"]) if is_json else (False, None)
-            _check(a["op"], found, value, a["value"], f"{step['name']} {a['target']}")
+            _check(a["op"], found, value, expected, f"{step['name']} {a['target']}")
     for a in step.get("header_assertions", []):
         value = response.headers.get(a["target"])
-        _check(a["op"], value is not None, value, a["value"],
+        _check(a["op"], value is not None, value, _substitute(a["value"], variables),
                f"{step['name']} header {a['target']}")
     for cap in step.get("capture", []):
         found, value = json_path(payload, cap["json_path"]) if is_json else (False, None)

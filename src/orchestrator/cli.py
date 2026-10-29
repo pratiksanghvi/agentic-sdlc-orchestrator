@@ -31,8 +31,14 @@ def _build_parser() -> argparse.ArgumentParser:
     run = commands.add_parser("run", help="run the SDLC pipeline for a requirement")
     run.add_argument("--requirement", required=True,
                      help="path to a requirement text file, or the requirement text itself")
+    run.add_argument("--product", type=Path,
+                     help="existing product repository to change (brownfield); omit for greenfield")
     verify = commands.add_parser("verify-log", help="verify a run's hash-chained audit log")
     verify.add_argument("run_id")
+    trace = commands.add_parser("trace", help="print a run's timeline from its audit log")
+    trace.add_argument("run_id")
+    metrics = commands.add_parser("metrics", help="reliability and cost metrics")
+    metrics.add_argument("run_id", nargs="?", help="one run (default: totals across all runs)")
     return parser
 
 
@@ -41,7 +47,7 @@ def _requirement_text(value: str) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else value
 
 
-def _run(root: Path, config, requirement: str) -> int:
+def _run(root: Path, config, requirement: str, product: Path | None = None) -> int:
     from orchestrator.graph.main import build_graph
     from orchestrator.human.gate import RichIO
     from orchestrator.llm.backends import AnthropicBackend
@@ -56,6 +62,8 @@ def _run(root: Path, config, requirement: str) -> int:
         result = run_graph(ctx, build_graph(ctx), {
             "run_id": ctx.run_id, "requirement_text": _requirement_text(requirement),
             "artifacts": {}, "status": "running",
+            "mode": "brownfield" if product else "greenfield",
+            **({"workspace": str(product.resolve())} if product else {}),
         })
     except BudgetStop as exc:
         console.print(f"[yellow]Run stopped at the cost ceiling:[/] {exc}")
@@ -94,7 +102,25 @@ def main(argv: list[str] | None = None) -> int:
             console.print(f"  {name} sha256: {digest[:16]}…")
         return 0
     if args.command == "run":
-        return _run(args.root, config, args.requirement)
+        return _run(args.root, config, args.requirement, args.product)
+    if args.command in ("trace", "metrics"):
+        import json
+
+        from orchestrator.observability.eventlog import EventLog
+        from orchestrator.observability.metrics import all_runs, run_metrics, trace_lines
+
+        if args.command == "metrics" and not args.run_id:
+            console.print_json(json.dumps(all_runs(args.root)))
+            return 0
+        log_path = args.root / "runs" / args.run_id / "logs" / "events.jsonl"
+        if not log_path.is_file():
+            console.print(f"[red]no run {args.run_id}[/]")
+            return 1
+        if args.command == "metrics":
+            console.print_json(json.dumps(run_metrics(EventLog(log_path))))
+        else:
+            print("\n".join(trace_lines(EventLog(log_path))))
+        return 0
     if args.command == "verify-log":
         from orchestrator.observability.eventlog import EventLog
 

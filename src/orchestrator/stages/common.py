@@ -33,6 +33,8 @@ class StageIO(TypedDict, total=False):
     status_reason: str
     workspace: str          # generated product repo (set by Stage 4)
     rollback_opt_in: bool   # asked once before implementation
+    restart_at: str         # stage chosen by the human on a final REJECT
+    mode: str               # greenfield | brownfield
 
 
 def ref_of(state: dict, artifact_type: str) -> ArtifactRef:
@@ -42,6 +44,15 @@ def ref_of(state: dict, artifact_type: str) -> ArtifactRef:
 def prompt(stage: str, name: str, **values: Any) -> str:
     text = resources.files(f"orchestrator.stages.{stage}").joinpath(f"prompts/{name}.md")
     return Template(text.read_text(encoding="utf-8")).substitute(values)
+
+
+def existing_system(ctx, state: dict) -> str:
+    """Approved brownfield impact analysis as prompt context ("none" for greenfield)."""
+    if "codebase_analysis" not in state.get("artifacts", {}):
+        return "none — this is a new service"
+    ref = ArtifactRef(**state["artifacts"]["codebase_analysis"])
+    ctx.approvals.require_approved(ref)
+    return ctx.store.read(ref)["analysis.md"]
 
 
 def to_json(data: Any) -> str:
@@ -107,6 +118,11 @@ def ask_choice(gate: str, title: str, summary: str, options: list[dict],
 def ask_questions(gate: str, title: str, questions: list[dict]) -> list[dict]:
     """Pause for answers. Each question: {id, question, options, default}. Returns answers."""
     return interrupt({"kind": "questions", "gate": gate, "title": title, "questions": questions})
+
+
+def show_notice(gate: str, title: str, body: str) -> None:
+    """Show information to the human without asking for a decision (still logged)."""
+    interrupt({"kind": "notice", "gate": gate, "title": title, "body": body})
 
 
 def ask_confirm(gate: str, question: str) -> bool:

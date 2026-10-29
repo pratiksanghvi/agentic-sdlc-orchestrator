@@ -1,3 +1,7 @@
+<existing_system>
+$existing
+</existing_system>
+
 <requirement>
 $requirement
 </requirement>
@@ -14,7 +18,9 @@ $analysis
 $feedback
 </review_feedback>
 
-Write the engineering spec for the MVP:
+Write the engineering spec for the MVP. For a change to an existing service, specify only the new
+or changed behavior (existing behavior is out of scope unless it changes).
+
 - Functional requirements FR-1, FR-2, ... each with priority (MVP or LATER), source and an exact
   source_quote. Unanswered NON_BLOCKING ambiguities are resolved with their recommended default and
   listed as assumptions (A-1, ...); requirements that rest on an assumption use source "assumption".
