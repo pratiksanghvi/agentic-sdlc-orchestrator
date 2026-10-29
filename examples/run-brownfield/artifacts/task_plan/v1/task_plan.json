@@ -1,0 +1,223 @@
+[
+  {
+    "id": "T-1",
+    "goal": "Add schema support for expires_at: update schema.sql with nullable expires_at column, add idempotent SchemaMigrator (InitializingBean, @DependsOnDatabaseInitialization, PRAGMA table_info check then ALTER TABLE), and add ClockConfig Clock bean. Add migrator test using a temp SQLite file with an old-schema table, run twice.",
+    "files": [
+      {
+        "path": "src/main/resources/schema.sql",
+        "action": "modify"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/persistence/SchemaMigrator.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/config/ClockConfig.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/persistence/SchemaMigratorTest.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [],
+    "traces": [
+      "FR-6",
+      "FR-7",
+      "FR-10"
+    ],
+    "done_criteria": "Project compiles; fresh and legacy databases both end up with expires_at, repeated migration is a no-op; existing tests pass."
+  },
+  {
+    "id": "T-2",
+    "goal": "Extend persistence: ShortLinkRecord gains Instant expiresAt; repository insert with expiresAt (3-arg overload delegating null), findByCode/MAPPER include expires_at, new incrementClickIfNotExpired(code, now) conditional UPDATE and existsByCode; repository depends on SchemaMigrator. Update existing call sites and repository tests.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/persistence/ShortLinkRecord.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/persistence/ShortLinkRepository.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java",
+        "action": "modify"
+      }
+    ],
+    "depends_on": [
+      "T-1"
+    ],
+    "traces": [
+      "FR-4",
+      "FR-6",
+      "FR-7",
+      "FR-10",
+      "FR-11",
+      "FR-12"
+    ],
+    "done_criteria": "Compiles; repository tests cover null and set expiry, boundary now == expires_at not counted, existsByCode, click counting only when not expired."
+  },
+  {
+    "id": "T-3",
+    "goal": "Add domain exceptions InvalidExpiryException and LinkExpiredException and ExpiryPolicy (JsonNode validation, BigInteger range 1..3650, computeExpiresAt = createdAt + 24h*days) with unit tests.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/service/InvalidExpiryException.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/service/LinkExpiredException.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/service/ExpiryPolicy.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/service/ExpiryPolicyTest.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [
+      "T-1"
+    ],
+    "traces": [
+      "FR-2",
+      "FR-3",
+      "FR-5",
+      "FR-6",
+      "FR-8",
+      "FR-9",
+      "FR-15"
+    ],
+    "done_criteria": "Compiles; tests cover null/absent, valid ints, 0, negatives, 3651, huge ints, 1.5, 7.0, 7e0, string, boolean, object, array, and the 24h arithmetic."
+  },
+  {
+    "id": "T-4",
+    "goal": "Update LinkService: create(url, JsonNode expiresInDays) validates URL then expiry before writing, uses clock.instant() once for createdAt/expiresAt across retries; resolveAndCount uses clock and incrementClickIfNotExpired, throwing LinkExpiredException or LinkNotFoundException. Update LinkServiceTest with a mutable test clock.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/service/LinkService.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/service/LinkServiceTest.java",
+        "action": "modify"
+      }
+    ],
+    "depends_on": [
+      "T-2",
+      "T-3"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-2",
+      "FR-4",
+      "FR-5",
+      "FR-6",
+      "FR-7",
+      "FR-8",
+      "FR-10",
+      "FR-11",
+      "FR-12"
+    ],
+    "done_criteria": "Compiles; service tests cover expiry computation, invalid expiry not persisted, expired link throws LinkExpiredException without counting, unknown code throws LinkNotFoundException."
+  },
+  {
+    "id": "T-5",
+    "goal": "API layer: CreateLinkRequest gets JsonNode expiresInDays; LinkController passes it to service; ProblemExceptionHandler maps InvalidExpiryException to 400 and LinkExpiredException to 410 with Cache-Control no-store; RedirectController keeps 302 with no-store and no Location on errors.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/api/CreateLinkRequest.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/LinkController.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/ProblemExceptionHandler.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/RedirectController.java",
+        "action": "modify"
+      }
+    ],
+    "depends_on": [
+      "T-4"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-5",
+      "FR-8",
+      "FR-9",
+      "FR-11",
+      "FR-12",
+      "FR-13",
+      "FR-14",
+      "FR-15"
+    ],
+    "done_criteria": "Compiles; existing API tests pass; responses carry exactly shortCode/longUrl/createdAt, 400 and 410 problem+json as specified."
+  },
+  {
+    "id": "T-6",
+    "goal": "Add MockMvc API tests with an adjustable Clock test bean (temp SQLite): create with/without expiry, invalid expiry variants (0, -1, 3651, huge, 1.5, 7.0, 7e0, \"7\", true, object, array), redirect 302 before expiry, 410 at/after expiry with no Location and no-store, click counts unchanged, details/analytics 200 for expired, unknown 404, alias ignored.",
+    "files": [
+      {
+        "path": "src/test/java/com/example/shortener/api/LinkApiTest.java",
+        "action": "modify"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/ShortenerApplicationTests.java",
+        "action": "modify"
+      }
+    ],
+    "depends_on": [
+      "T-5"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-5",
+      "FR-6",
+      "FR-8",
+      "FR-9",
+      "FR-10",
+      "FR-11",
+      "FR-12",
+      "FR-13",
+      "FR-14",
+      "FR-15"
+    ],
+    "done_criteria": "mvn -B verify passes with all new tests."
+  },
+  {
+    "id": "T-7",
+    "goal": "Update documentation for expiresInDays, 410 Gone, expiry semantics, and unaffected details/analytics.",
+    "files": [
+      {
+        "path": "docs/API.md",
+        "action": "modify"
+      },
+      {
+        "path": "README.md",
+        "action": "modify"
+      }
+    ],
+    "depends_on": [
+      "T-5"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-5",
+      "FR-6",
+      "FR-13"
+    ],
+    "done_criteria": "Docs describe the optional field, validation rules, 410 response, N x 24h semantics and now >= expiry rule."
+  }
+]

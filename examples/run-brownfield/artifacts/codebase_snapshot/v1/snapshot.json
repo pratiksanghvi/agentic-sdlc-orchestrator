@@ -1,0 +1,33 @@
+{
+  "stack": "java21-springboot3-maven",
+  "head": "9c093950d4aac60f55a70819a99566be4599300a",
+  "branch": "master",
+  "files": [
+    "README.md",
+    "docs/API.md",
+    "pom.xml",
+    "src/main/java/com/example/shortener/ServiceReadyListener.java",
+    "src/main/java/com/example/shortener/ShortenerApplication.java",
+    "src/main/java/com/example/shortener/api/CreateLinkRequest.java",
+    "src/main/java/com/example/shortener/api/LinkAnalyticsResponse.java",
+    "src/main/java/com/example/shortener/api/LinkController.java",
+    "src/main/java/com/example/shortener/api/ProblemExceptionHandler.java",
+    "src/main/java/com/example/shortener/api/RedirectController.java",
+    "src/main/java/com/example/shortener/api/ShortLinkResponse.java",
+    "src/main/java/com/example/shortener/persistence/ShortLinkRecord.java",
+    "src/main/java/com/example/shortener/persistence/ShortLinkRepository.java",
+    "src/main/java/com/example/shortener/service/InvalidUrlException.java",
+    "src/main/java/com/example/shortener/service/LinkNotFoundException.java",
+    "src/main/java/com/example/shortener/service/LinkService.java",
+    "src/main/java/com/example/shortener/service/ShortCodeGenerator.java",
+    "src/main/java/com/example/shortener/service/UrlValidator.java",
+    "src/main/resources/application.properties",
+    "src/main/resources/schema.sql",
+    "src/test/java/com/example/shortener/ShortenerApplicationTests.java",
+    "src/test/java/com/example/shortener/api/LinkApiTest.java",
+    "src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java",
+    "src/test/java/com/example/shortener/service/LinkServiceTest.java",
+    "src/test/java/com/example/shortener/service/ShortCodeGeneratorTest.java",
+    "src/test/java/com/example/shortener/service/UrlValidatorTest.java"
+  ]
+}

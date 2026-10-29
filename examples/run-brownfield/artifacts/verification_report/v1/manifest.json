@@ -1,0 +1,18 @@
+{
+  "type": "verification_report",
+  "version": 1,
+  "produced_by": "V5",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:10:52.030Z",
+  "inputs": [
+    {
+      "type": "acceptance_suite",
+      "version": 1,
+      "hash": "sha256:cf83f53ea2583f4c77a92fa87ab40475a7c6f0254dbb166d76ffea3903bfd348"
+    }
+  ],
+  "files": {
+    "report.json": "sha256:28087ddc81e3df23b9db37fed3d0483dc0a2aa0bc93408f3cbaf6437279f7f8b"
+  },
+  "hash": "sha256:432c308b906965daf5cf28a02fc6b5fd91c83ad044a12f558f55f5afd0e56feb"
+}

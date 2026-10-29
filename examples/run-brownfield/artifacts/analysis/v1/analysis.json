@@ -1,0 +1,112 @@
+{
+  "intent": "Let clients optionally set an expiry in days when creating a short link, so that the redirect for an expired link returns 410 Gone instead of redirecting, while links created without an expiry never expire.",
+  "functional_needs": [
+    {
+      "statement": "POST /api/links accepts an optional expiry value, expressed in days, alongside the URL when a short link is created.",
+      "source_quote": "when creating a short link the client may give an expiry in days"
+    },
+    {
+      "statement": "Once a link's expiry time has passed, GET /{code} for that link returns 410 Gone instead of a 302 redirect. The response uses the existing application/problem+json error format.",
+      "source_quote": "After it expires, the redirect returns 410 Gone instead of redirecting"
+    },
+    {
+      "statement": "Before its expiry time, a link with an expiry keeps redirecting as it does today: 302, Location set to the long URL, and Cache-Control: no-store.",
+      "source_quote": "After it expires, the redirect returns 410 Gone"
+    },
+    {
+      "statement": "Links created without an expiry never expire. A create request that omits the expiry field still returns 201 with the same Location header and body fields as today, and the link keeps redirecting indefinitely.",
+      "source_quote": "Links without an expiry never expire"
+    },
+    {
+      "statement": "Links that existed before this change have no expiry. They keep working for redirect, details and analytics on upgraded deployments without errors.",
+      "source_quote": "Links without an expiry never expire"
+    },
+    {
+      "statement": "GET /{code} for an unknown code still returns 404, not 410. Only known links whose expiry has passed return 410.",
+      "source_quote": "the redirect returns 410 Gone instead of redirecting"
+    }
+  ],
+  "nfr_asks": [],
+  "ambiguities": [
+    {
+      "id": "Q-1",
+      "question": "Which expiry values are valid, and what happens with invalid ones (zero, negative, fractional, numeric strings like \"7\", or very large numbers)?",
+      "why_it_matters": "This determines which create requests return 201 and which return 400. Very large values could otherwise cause 500 errors or corrupt the stored expiry. A rejected request must not persist a link.",
+      "recommended_default": "Accept only whole-number JSON integers from 1 to 3650 inclusive. Reject zero, negative, fractional, string and out-of-range values with 400 application/problem+json whose detail describes the expiry problem. Persist nothing on rejection.",
+      "severity": "BLOCKING",
+      "options": [
+        "Whole-number integers 1–3650; everything else returns 400 and nothing is persisted",
+        "Any positive integer up to a larger maximum (e.g. 36500); everything else returns 400",
+        "Lenient: accept numeric strings and truncate fractions, rejecting only zero, negative and out-of-range values"
+      ]
+    },
+    {
+      "id": "Q-2",
+      "question": "Should a GET /{code} that returns 410 for an expired link increase the click count or update the last-click time?",
+      "why_it_matters": "This changes the clickCount and lastClickedAt values that the analytics endpoint returns for expired links.",
+      "recommended_default": "No. Only successful 302 redirects are counted. A 410 response leaves clickCount and lastClickedAt unchanged.",
+      "severity": "BLOCKING",
+      "options": [
+        "Not counted: 410 responses leave the analytics unchanged",
+        "Counted: every access attempt to a known link increments clickCount"
+      ]
+    },
+    {
+      "id": "Q-3",
+      "question": "What should GET /api/links/{code} and GET /api/links/{code}/analytics return for an expired link?",
+      "why_it_matters": "Returning 410 there would change the existing contracts of those endpoints. Returning 200 keeps details and analytics viewable after expiry.",
+      "recommended_default": "Keep returning 200 with the current fields. Only the redirect endpoint returns 410.",
+      "severity": "BLOCKING",
+      "options": [
+        "200 with current fields (only the redirect returns 410)",
+        "410 Gone on details and analytics as well",
+        "200 on analytics, 410 on details"
+      ]
+    },
+    {
+      "id": "Q-4",
+      "question": "Should the create and details responses expose the computed expiry time?",
+      "why_it_matters": "Clients cannot see when a link expires unless the response includes it. Adding the field is additive, but a null value for non-expiring links is visible to strict clients.",
+      "recommended_default": "Add an expiresAt field (UTC timestamp) to the create and details responses. It is null for links without an expiry, and this is documented.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Add expiresAt, null when the link never expires",
+        "Add expiresAt, omitted when the link never expires",
+        "Do not expose the expiry in responses"
+      ]
+    },
+    {
+      "id": "Q-5",
+      "question": "How is 'days' measured, and is a link expired exactly at its expiry instant?",
+      "why_it_matters": "This defines precisely when the redirect switches from 302 to 410.",
+      "recommended_default": "expiresAt = createdAt + N × 24 hours (UTC). The link is expired when the current time is at or after expiresAt.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "N × 24h from createdAt; expired when now >= expiresAt",
+        "N × 24h from createdAt; expired when now > expiresAt",
+        "Expire at the end of the Nth calendar day (UTC)"
+      ]
+    },
+    {
+      "id": "Q-6",
+      "question": "What should the request field for the expiry be named, and does an explicit null count as no expiry?",
+      "why_it_matters": "The field name is part of the public API contract that clients must use.",
+      "recommended_default": "Name it expiresInDays. Treat an absent field and an explicit null the same way: the link never expires. Continue to ignore unknown JSON properties.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "expiresInDays; null is treated as absent",
+        "expiryDays; null is treated as absent",
+        "expiresInDays; an explicit null returns 400"
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "Changing or removing a link's expiry after creation",
+    "Deleting or purging expired links from storage",
+    "Specifying expiry as an absolute timestamp or in units other than days",
+    "Making expiry mandatory or applying a default expiry to links",
+    "Custom aliases, authentication, or any other change to existing endpoints beyond the expiry behaviour",
+    "Any non-functional requirements (none were requested)"
+  ],
+  "stack_constraint": null
+}

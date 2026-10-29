@@ -73,9 +73,13 @@ A full run takes roughly 10–15 minutes (Opus calls take 20–90 s each) and co
 
 ## Example
 
-`examples/run-greenfield/` contains a recorded successful run: the approved spec, design, test
-plan, verification report, engineering summary, metrics and the audit-log trace, plus
-`examples/generated-url-shortener/` with the generated Java service at its accepted tag.
+Recorded live runs (artifacts, hash-chained audit logs, traces, metrics, engineering summaries):
+
+| Example | Outcome |
+|---|---|
+| [`examples/run-greenfield/`](examples/run-greenfield/) | Loose requirement → Java URL shortener; 1 automatic fix; **24/24** acceptance tests; accepted as `v0.1.0` |
+| [`examples/run-brownfield/`](examples/run-brownfield/) | Link expiry added to `v0.1.0`: impact analysis, 7 tasks, **33/33** acceptance tests first time; accepted as `v0.2.0` (diff included) |
+| [`examples/generated-url-shortener/`](examples/generated-url-shortener/) | The generated Java service at `v0.1.0` |
 
 ## Development
 

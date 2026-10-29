@@ -1,0 +1,21 @@
+{
+  "type": "acceptance_suite",
+  "version": 1,
+  "produced_by": "X",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:08:18.775Z",
+  "inputs": [
+    {
+      "type": "test_plan",
+      "version": 2,
+      "hash": "sha256:ff3b9aab5ca8df60b73507755d1f549c8c3c7f40bbe8b089d8893619fec03317"
+    }
+  ],
+  "files": {
+    "acceptance_support.py": "sha256:e22200eed744a81448ea1ce5fb11889d00151e35fae68df8da2b432544c12145",
+    "conftest.py": "sha256:ef0a23294ddc95be2d455b9526c3d8a217bf8ef41bab77ca0e5418b3053f2206",
+    "cases.json": "sha256:e23e1f0c0ebda03a4f26fc6d764dbd863962326712d6acdfa68c9bcc20c25274",
+    "test_acceptance_main.py": "sha256:80f2f6531b3afe7c5957f04061c130d572383b792060fe97614789698b1361c9"
+  },
+  "hash": "sha256:cf83f53ea2583f4c77a92fa87ab40475a7c6f0254dbb166d76ffea3903bfd348"
+}

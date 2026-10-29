@@ -1,0 +1,18 @@
+{
+  "type": "task_plan",
+  "version": 1,
+  "produced_by": "I1",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:08:32.466Z",
+  "inputs": [
+    {
+      "type": "design",
+      "version": 1,
+      "hash": "sha256:6a7f3b25068f8b48350cd595309f359fe9d18e1e8eedac8e234aa23b4fa8dddd"
+    }
+  ],
+  "files": {
+    "task_plan.json": "sha256:6783f65509994404dc0cdbf3d13819ce2e3f691584b8c9a48df56378889ab974"
+  },
+  "hash": "sha256:c7ba04440e7bbf4618586249696adc1c750293298bf3f6bda276485fa7e4c2eb"
+}

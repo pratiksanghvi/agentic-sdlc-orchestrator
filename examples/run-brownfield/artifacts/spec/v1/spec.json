@@ -1,0 +1,381 @@
+{
+  "title": "Optional link expiry for short links (410 Gone on expired redirects)",
+  "functional_requirements": [
+    {
+      "id": "FR-1",
+      "statement": "POST /api/links accepts an optional expiry field named expiresInDays in the JSON request body, giving the number of days until the link expires. The field name rests on assumption A-1 (open question Q-1, pending reviewer confirmation).",
+      "priority": "MVP",
+      "source": "assumption",
+      "source_quote": "when creating a short link the client may give an expiry in days"
+    },
+    {
+      "id": "FR-2",
+      "statement": "An expiresInDays value that is a whole-number JSON integer from 1 to 3650 inclusive is accepted. The link is created with 201, and the Location header and body are the same as for a create request without expiry.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Accept only whole-number JSON integers from 1 to 3650 inclusive."
+    },
+    {
+      "id": "FR-3",
+      "statement": "An expiresInDays value that is zero, negative, fractional, a string (e.g. \"7\") or outside 1..3650 is rejected with 400 application/problem+json. The detail describes the expiry problem and does not use the URL validation message.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Reject zero, negative, fractional, string and out-of-range values with 400 application/problem+json whose detail describes the expiry problem."
+    },
+    {
+      "id": "FR-4",
+      "statement": "When a create request is rejected because of its expiry value, no link is persisted.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Persist nothing on rejection."
+    },
+    {
+      "id": "FR-5",
+      "statement": "GET /{code} for an existing link whose expiry has passed returns 410 instead of a 302 redirect. The response is application/problem+json with type, title 'Gone', status 410 and detail, and it has no Location header.",
+      "priority": "MVP",
+      "source": "explicit",
+      "source_quote": "After it expires, the redirect returns 410 Gone instead of redirecting."
+    },
+    {
+      "id": "FR-6",
+      "statement": "A link's expiry instant is its creation time plus N × 24 hours (UTC), where N is expiresInDays. The link is expired when the current time is greater than or equal to the expiry instant (assumption A-4).",
+      "priority": "MVP",
+      "source": "assumption",
+      "source_quote": "After it expires, the redirect returns 410 Gone"
+    },
+    {
+      "id": "FR-7",
+      "statement": "A link created without expiresInDays never expires and keeps redirecting with 302 indefinitely. This includes every link that existed before this change.",
+      "priority": "MVP",
+      "source": "explicit",
+      "source_quote": "Links without an expiry never expire."
+    },
+    {
+      "id": "FR-8",
+      "statement": "An explicit JSON null for expiresInDays is treated the same as an absent field. The request returns 201 and the link never expires (assumption A-2).",
+      "priority": "MVP",
+      "source": "assumption",
+      "source_quote": "Links without an expiry never expire."
+    },
+    {
+      "id": "FR-9",
+      "statement": "A JSON number with an integral value but written with a fraction or exponent (e.g. 7.0 or 7e0) is not a whole-number JSON integer. It is rejected with 400 application/problem+json, and nothing is persisted (assumption A-3).",
+      "priority": "MVP",
+      "source": "assumption",
+      "source_quote": "Accept only whole-number JSON integers from 1 to 3650 inclusive."
+    },
+    {
+      "id": "FR-10",
+      "statement": "A 410 response for an expired link does not change the link's clickCount or lastClickedAt. Only successful 302 redirects are counted.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Only successful 302 redirects are counted. A 410 response leaves clickCount and lastClickedAt unchanged."
+    },
+    {
+      "id": "FR-11",
+      "statement": "For a link with an expiry that has not yet passed, GET /{code} returns 302 with Location set to the long URL and Cache-Control: no-store. It also increments clickCount by exactly one and updates lastClickedAt.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Only successful 302 redirects are counted."
+    },
+    {
+      "id": "FR-12",
+      "statement": "GET /{code} for an unknown code still returns 404, not 410. 410 is returned only for existing links that have expired.",
+      "priority": "MVP",
+      "source": "explicit",
+      "source_quote": "After it expires, the redirect returns 410 Gone"
+    },
+    {
+      "id": "FR-13",
+      "statement": "For an expired link, GET /api/links/{code} and GET /api/links/{code}/analytics keep returning 200 with their current fields. Only the redirect endpoint returns 410.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Keep returning 200 with the current fields. Only the redirect endpoint returns 410."
+    },
+    {
+      "id": "FR-14",
+      "statement": "No new response field (such as expiresAt) is added. Create and details responses keep exactly their current fields, whether or not an expiry was given. Unknown request properties other than expiresInDays (e.g. \"alias\") are still ignored, and the request still returns 201.",
+      "priority": "MVP",
+      "source": "clarification",
+      "source_quote": "Do not add any new response field. Keep create and details responses exactly as today"
+    },
+    {
+      "id": "FR-15",
+      "statement": "The 410 response carries a generic detail such as 'short link has expired' and the header Cache-Control: no-store (assumption A-5).",
+      "priority": "MVP",
+      "source": "assumption",
+      "source_quote": "the redirect returns 410 Gone"
+    }
+  ],
+  "non_functional_requirements": [],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1.1",
+      "requirement_id": "FR-1",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with body {\"url\":\"https://example.com/a\",\"expiresInDays\":7}",
+      "then": "The response status is 201 and a Location header /api/links/{code} is present",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-1.2",
+      "requirement_id": "FR-1",
+      "given": "A link was created with expiresInDays=1",
+      "when": "The test clock is advanced by 24 hours and the client sends GET /{code}",
+      "then": "The response status is 410, which shows the expiresInDays field took effect",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-2.1",
+      "requirement_id": "FR-2",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with expiresInDays=1, and separately with expiresInDays=3650",
+      "then": "Both responses are 201 with a body containing exactly shortCode, longUrl and createdAt",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-2.2",
+      "requirement_id": "FR-2",
+      "given": "A link was created with expiresInDays=3650",
+      "when": "The client immediately sends GET /{code}",
+      "then": "The response status is 302 with Location equal to the submitted URL",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-3.1",
+      "requirement_id": "FR-3",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with a valid url and expiresInDays set to each of 0, -1, 1.5, \"7\", 3651",
+      "then": "Each response has status 400 and Content-Type application/problem+json, and its detail mentions the expiry field rather than the URL",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-3.2",
+      "requirement_id": "FR-3",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with expiresInDays=99999999999999999999",
+      "then": "The response status is 400 (not 500) with Content-Type application/problem+json and no stack trace in the body",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-4.1",
+      "requirement_id": "FR-4",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with expiresInDays=0 and receives 400",
+      "then": "The response has no Location header, and no new short code is retrievable through GET /api/links/{code} for any code produced by the request",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-4.2",
+      "requirement_id": "FR-4",
+      "given": "An invalid-expiry create request was rejected with 400",
+      "when": "A subsequent valid create request is sent",
+      "then": "It returns 201 normally, and only the valid link exists (its details return 200)",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-5.1",
+      "requirement_id": "FR-5",
+      "given": "A link was created with expiresInDays=1 and the test clock was advanced by 25 hours",
+      "when": "The client sends GET /{code}",
+      "then": "The response status is 410, Content-Type is application/problem+json, the body contains type, title 'Gone', status 410 and detail, and there is no Location header",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-6.1",
+      "requirement_id": "FR-6",
+      "given": "A link was created with expiresInDays=2",
+      "when": "The test clock is set to 1 millisecond before creation + 48 hours and GET /{code} is sent",
+      "then": "The response status is 302",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-6.2",
+      "requirement_id": "FR-6",
+      "given": "A link was created with expiresInDays=2",
+      "when": "The test clock is set to exactly creation + 48 hours and GET /{code} is sent",
+      "then": "The response status is 410",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-7.1",
+      "requirement_id": "FR-7",
+      "given": "A link was created without the expiresInDays field",
+      "when": "The test clock is advanced by 3651 days and GET /{code} is sent",
+      "then": "The response status is 302 with Location equal to the long URL",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-7.2",
+      "requirement_id": "FR-7",
+      "given": "A link existed in the data store before the service was upgraded to this version",
+      "when": "The upgraded service starts (including a second restart) and GET /{code} is sent for that link",
+      "then": "The service starts successfully each time, and the response status is 302 with Location equal to the link's long URL",
+      "verification_method": "HTTP request and response assertion against an upgraded pre-existing data store"
+    },
+    {
+      "id": "AC-8.1",
+      "requirement_id": "FR-8",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with body {\"url\":\"https://example.com/a\",\"expiresInDays\":null}",
+      "then": "The response status is 201",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-8.2",
+      "requirement_id": "FR-8",
+      "given": "A link was created with expiresInDays explicitly null",
+      "when": "The test clock is advanced by 3651 days and GET /{code} is sent",
+      "then": "The response status is 302",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-9.1",
+      "requirement_id": "FR-9",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with a valid url and expiresInDays set to 7.0, and separately to 7e0",
+      "then": "Each response has status 400 with Content-Type application/problem+json and no Location header",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-10.1",
+      "requirement_id": "FR-10",
+      "given": "A link was created with expiresInDays=1, redirected once (clickCount=1), and the test clock was then advanced by 25 hours",
+      "when": "The client sends GET /{code} three times, each returning 410, and then GET /api/links/{code}/analytics",
+      "then": "The analytics response shows clickCount=1 and lastClickedAt equal to the value recorded after the single successful redirect",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-10.2",
+      "requirement_id": "FR-10",
+      "given": "A link was created with expiresInDays=1, never redirected, and the test clock was advanced by 25 hours",
+      "when": "The client sends GET /{code}, which returns 410, and then GET /api/links/{code}/analytics",
+      "then": "The analytics response shows clickCount=0 and lastClickedAt=null",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-11.1",
+      "requirement_id": "FR-11",
+      "given": "A link was created with expiresInDays=5 and has not expired",
+      "when": "The client sends GET /{code}",
+      "then": "The response status is 302, Location equals the long URL, and Cache-Control is no-store",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-11.2",
+      "requirement_id": "FR-11",
+      "given": "A link was created with expiresInDays=5 and has clickCount=0",
+      "when": "The client sends GET /{code} twice and then GET /api/links/{code}/analytics",
+      "then": "The analytics response shows clickCount=2 and a non-null lastClickedAt",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-12.1",
+      "requirement_id": "FR-12",
+      "given": "No link exists with code 'zzzzzzz'",
+      "when": "The client sends GET /zzzzzzz",
+      "then": "The response status is 404 with Content-Type application/problem+json",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-13.1",
+      "requirement_id": "FR-13",
+      "given": "A link was created with expiresInDays=1 and the test clock was advanced by 25 hours",
+      "when": "The client sends GET /api/links/{code}",
+      "then": "The response status is 200 with a body containing exactly shortCode, longUrl and createdAt",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-13.2",
+      "requirement_id": "FR-13",
+      "given": "A link was created with expiresInDays=1 and the test clock was advanced by 25 hours",
+      "when": "The client sends GET /api/links/{code}/analytics",
+      "then": "The response status is 200 with a body containing exactly shortCode, clickCount and lastClickedAt",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    },
+    {
+      "id": "AC-14.1",
+      "requirement_id": "FR-14",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with {\"url\":\"https://example.com/a\",\"expiresInDays\":7}",
+      "then": "The response is 201 with a body containing exactly the fields shortCode, longUrl and createdAt, and no expiresAt field",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-14.2",
+      "requirement_id": "FR-14",
+      "given": "The service is running",
+      "when": "A client sends POST /api/links with {\"url\":\"https://example.com/a\"}, and separately with {\"url\":\"https://example.com/a\",\"alias\":\"mine\"}",
+      "then": "Both responses are 201 with Location /api/links/{code} and a body containing exactly shortCode, longUrl and createdAt",
+      "verification_method": "HTTP request and response assertion"
+    },
+    {
+      "id": "AC-15.1",
+      "requirement_id": "FR-15",
+      "given": "A link was created with expiresInDays=1 and the test clock was advanced by 25 hours",
+      "when": "The client sends GET /{code}",
+      "then": "The 410 response includes the header Cache-Control: no-store, and its detail states that the short link has expired",
+      "verification_method": "HTTP request and response assertion with a controllable test clock"
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "A-1",
+      "text": "The optional request field is named expiresInDays. This is the recommended default for BLOCKING question Q-1, which the clarifications did not answer. The reviewer must confirm or change the name before approval."
+    },
+    {
+      "id": "A-2",
+      "text": "An explicit JSON null for expiresInDays is treated as absent. The request returns 201 and the link never expires."
+    },
+    {
+      "id": "A-3",
+      "text": "Only JSON integer literals count as whole-number JSON integers. Integral values written with a fraction or exponent (7.0, 7e0) are rejected with 400."
+    },
+    {
+      "id": "A-4",
+      "text": "The expiry instant is creation time + N × 24 hours (UTC). A link is expired when the current time is greater than or equal to the expiry instant."
+    },
+    {
+      "id": "A-5",
+      "text": "The 410 problem+json response uses title 'Gone', a generic detail such as 'short link has expired', and Cache-Control: no-store, as on the redirect."
+    },
+    {
+      "id": "A-6",
+      "text": "Acceptance tests that need time to pass can control the service's notion of current time, for example with an adjustable test clock."
+    }
+  ],
+  "out_of_scope": [
+    "Adding any new response field (e.g. expiresAt) to the create or details responses (per C-4)",
+    "Returning 410 from GET /api/links/{code} or GET /api/links/{code}/analytics for expired links (per C-3)",
+    "Counting clicks or updating lastClickedAt on 410 responses (per C-2)",
+    "Expiry units other than whole days, and values outside 1..3650 (per C-1)",
+    "Changing or removing a link's expiry after creation (not requested)",
+    "Deleting or purging expired links (not requested)",
+    "Any non-functional requirements such as rate limiting, additional security controls or metrics (none requested)",
+    "Existing behavior of the service that this change does not alter"
+  ],
+  "not_supported": [],
+  "constraints": [],
+  "clarifications": [
+    {
+      "id": "C-1",
+      "question": "Which expiry values are valid, and what happens with invalid ones (zero, negative, fractional, numeric strings like \"7\", or very large numbers)?",
+      "answer": "Accept only whole-number JSON integers from 1 to 3650 inclusive. Reject zero, negative, fractional, string and out-of-range values with 400 application/problem+json whose detail describes the expiry problem. Persist nothing on rejection."
+    },
+    {
+      "id": "C-2",
+      "question": "Should a GET /{code} that returns 410 for an expired link increase the click count or update the last-click time?",
+      "answer": "No. Only successful 302 redirects are counted. A 410 response leaves clickCount and lastClickedAt unchanged."
+    },
+    {
+      "id": "C-3",
+      "question": "What should GET /api/links/{code} and GET /api/links/{code}/analytics return for an expired link?",
+      "answer": "Keep returning 200 with the current fields. Only the redirect endpoint returns 410."
+    },
+    {
+      "id": "C-4",
+      "question": "Should the link's computed expiry timestamp (e.g. expiresAt) be exposed in the create (POST /api/links) and details (GET /api/links/{code}) responses? If so, how should it appear for links that never expire?",
+      "answer": "Do not add any new response field. Keep create and details responses exactly as today, per C-3's 'current fields'."
+    }
+  ]
+}

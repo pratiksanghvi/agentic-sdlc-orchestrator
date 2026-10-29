@@ -1,0 +1,194 @@
+[
+  {
+    "requirement_id": "FR-1",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "api.CreateLinkRequest",
+      "api.LinkController",
+      "service.LinkService",
+      "docs (docs/API.md, README.md)"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-2",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "service.ExpiryPolicy",
+      "service.LinkService",
+      "api.LinkController"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-3",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "api.CreateLinkRequest",
+      "service.ExpiryPolicy",
+      "service.InvalidExpiryException / service.LinkExpiredException",
+      "api.ProblemExceptionHandler"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-4",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "service.LinkService",
+      "persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-5",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "api.RedirectController",
+      "service.LinkService",
+      "service.InvalidExpiryException / service.LinkExpiredException",
+      "api.ProblemExceptionHandler",
+      "config.ClockConfig"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-6",
+    "endpoints": [
+      "POST /api/links",
+      "GET /{code}"
+    ],
+    "modules": [
+      "service.ExpiryPolicy",
+      "service.LinkService",
+      "persistence.ShortLinkRepository",
+      "persistence.ShortLinkRecord",
+      "resources/schema.sql",
+      "config.ClockConfig"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-7",
+    "endpoints": [
+      "POST /api/links",
+      "GET /{code}"
+    ],
+    "modules": [
+      "persistence.SchemaMigrator",
+      "resources/schema.sql",
+      "persistence.ShortLinkRepository",
+      "persistence.ShortLinkRecord",
+      "service.LinkService"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-8",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "api.CreateLinkRequest",
+      "service.ExpiryPolicy",
+      "service.LinkService"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-9",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "api.CreateLinkRequest",
+      "service.ExpiryPolicy",
+      "api.ProblemExceptionHandler"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-10",
+    "endpoints": [
+      "GET /{code}",
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "service.LinkService",
+      "persistence.ShortLinkRepository",
+      "config.ClockConfig"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-11",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "api.RedirectController",
+      "service.LinkService",
+      "persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-12",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "service.LinkService",
+      "persistence.ShortLinkRepository",
+      "api.ProblemExceptionHandler",
+      "api.RedirectController"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-13",
+    "endpoints": [
+      "GET /api/links/{code}",
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "api.LinkController",
+      "api.ShortLinkResponse / api.LinkAnalyticsResponse"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-14",
+    "endpoints": [
+      "POST /api/links",
+      "GET /api/links/{code}"
+    ],
+    "modules": [
+      "api.CreateLinkRequest",
+      "api.LinkController",
+      "api.ShortLinkResponse / api.LinkAnalyticsResponse"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-15",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "api.ProblemExceptionHandler",
+      "service.InvalidExpiryException / service.LinkExpiredException"
+    ],
+    "catalog_ids": []
+  }
+]

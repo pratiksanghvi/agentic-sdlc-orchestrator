@@ -1,0 +1,398 @@
+{
+  "modules": [
+    {
+      "name": "config.ClockConfig",
+      "responsibility": "Defines a java.time.Clock bean (Clock.systemUTC() in production). Tests replace it with an adjustable clock so that creation time and the current time used for expiry checks can be controlled (A-6). All 'now' values in LinkService come from this bean instead of Instant.now().",
+      "traces": [
+        "FR-6",
+        "FR-5",
+        "FR-7",
+        "FR-10",
+        "FR-11"
+      ]
+    },
+    {
+      "name": "api.CreateLinkRequest",
+      "responsibility": "Request DTO for POST /api/links with String url and an optional expiresInDays field typed as com.fasterxml.jackson.databind.JsonNode. The raw JSON node is kept so that Jackson cannot coerce \"7\" to 7 or truncate 1.9 to 1, and so integer literals can be told apart from 7.0 and 7e0. Absent and explicit null both yield a null or NullNode value. Global ObjectMapper settings are unchanged, so unknown properties such as alias are still ignored.",
+      "traces": [
+        "FR-1",
+        "FR-3",
+        "FR-8",
+        "FR-9",
+        "FR-14"
+      ]
+    },
+    {
+      "name": "api.LinkController",
+      "responsibility": "POST /api/links passes url and the raw expiresInDays node to LinkService.create and returns 201 with Location /api/links/{code} and the unchanged ShortLinkResponse (shortCode, longUrl, createdAt). GET /api/links/{code} and GET /api/links/{code}/analytics are unchanged and ignore expiry, so they return 200 for expired links. toResponse does not map expiresAt.",
+      "traces": [
+        "FR-1",
+        "FR-2",
+        "FR-13",
+        "FR-14"
+      ]
+    },
+    {
+      "name": "api.ShortLinkResponse / api.LinkAnalyticsResponse",
+      "responsibility": "Existing response records, left unchanged with no expiresAt field. Create and details return exactly shortCode, longUrl and createdAt. Analytics returns exactly shortCode, clickCount and lastClickedAt.",
+      "traces": [
+        "FR-13",
+        "FR-14"
+      ]
+    },
+    {
+      "name": "api.RedirectController",
+      "responsibility": "GET /{code} calls LinkService.resolveAndCount. On success it returns 302 with Location set to the long URL and Cache-Control: no-store. LinkNotFoundException and LinkExpiredException propagate to ProblemExceptionHandler, which returns 404 or 410 with no Location header.",
+      "traces": [
+        "FR-5",
+        "FR-11",
+        "FR-12"
+      ]
+    },
+    {
+      "name": "api.ProblemExceptionHandler",
+      "responsibility": "Existing problem+json mapping, extended. A new handler maps InvalidExpiryException to 400 (title 'Bad Request') with an expiry-specific detail. A new handler maps LinkExpiredException to 410 (title 'Gone', detail 'short link has expired') with the header Cache-Control: no-store. The existing handlers stay as they are: InvalidUrlException 400, malformed body 400, 415, LinkNotFoundException 404, and the catch-all 500.",
+      "traces": [
+        "FR-3",
+        "FR-5",
+        "FR-9",
+        "FR-12",
+        "FR-15"
+      ]
+    },
+    {
+      "name": "service.ExpiryPolicy",
+      "responsibility": "Validates and converts the raw expiresInDays node. A null or NullNode value returns Optional.empty() (never expires). A node is accepted only if isIntegralNumber() is true, which covers JSON integer literals (Int, Long or BigInteger nodes). Its value is compared as a BigInteger against the range 1..3650, so 99999999999999999999 cannot overflow. Any other value throws InvalidExpiryException: zero, negative, out of range, a float literal such as 1.5, 7.0 or 7e0, a string, a boolean, an object or an array. computeExpiresAt(createdAt, days) returns createdAt.plus(Duration.ofHours(24L * days)). The 3650-day cap keeps timestamps within the fixed-width year range.",
+      "traces": [
+        "FR-2",
+        "FR-3",
+        "FR-6",
+        "FR-8",
+        "FR-9"
+      ]
+    },
+    {
+      "name": "service.LinkService",
+      "responsibility": "create(url, expiresInDaysNode) validates the URL (existing logic) and then the expiry through ExpiryPolicy, before any database write. It takes createdAt = clock.instant() once and derives expiresAt from that same instant (null if no expiry). Both are passed on every collision-retry insert. resolveAndCount(code) runs in the existing transaction. It sets now = clock.instant() and calls repository.incrementClickIfNotExpired(code, now). If one row is updated, it returns findLongUrl(code). If none is updated, it throws LinkExpiredException when existsByCode(code) is true and LinkNotFoundException otherwise. Expired links are therefore never counted.",
+      "traces": [
+        "FR-1",
+        "FR-2",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-10",
+        "FR-11",
+        "FR-12"
+      ]
+    },
+    {
+      "name": "service.InvalidExpiryException / service.LinkExpiredException",
+      "responsibility": "New domain exceptions. InvalidExpiryException carries the detail 'expiresInDays must be a whole-number JSON integer from 1 to 3650' and maps to 400, separate from the URL validation message. LinkExpiredException maps to 410 Gone.",
+      "traces": [
+        "FR-3",
+        "FR-5",
+        "FR-9",
+        "FR-15"
+      ]
+    },
+    {
+      "name": "persistence.ShortLinkRecord",
+      "responsibility": "Gains an Instant expiresAt component, which is null when the link never expires. The MAPPER and all constructor call sites are updated.",
+      "traces": [
+        "FR-6",
+        "FR-7"
+      ]
+    },
+    {
+      "name": "persistence.ShortLinkRepository",
+      "responsibility": "insert(code, url, createdAt, expiresAt) writes expires_at using the same fixed-width UTC microsecond format() as the other timestamps, or NULL. The existing insert(code, url, createdAt) is kept as an overload that delegates with null. findByCode SELECT and MAPPER include expires_at. A new method, incrementClickIfNotExpired(code, now), runs: UPDATE short_links SET click_count = click_count + 1, last_clicked_at = ? WHERE short_code = ? AND (expires_at IS NULL OR expires_at > ?). The predicate means a link is expired when now >= expires_at. A new existsByCode(code) method is added. findLongUrl is unchanged. The repository depends on SchemaMigrator, so the column exists before any query runs.",
+      "traces": [
+        "FR-4",
+        "FR-6",
+        "FR-7",
+        "FR-10",
+        "FR-11",
+        "FR-12"
+      ]
+    },
+    {
+      "name": "persistence.SchemaMigrator",
+      "responsibility": "Idempotent startup migration. It is an InitializingBean annotated @DependsOnDatabaseInitialization, so it runs after schema.sql. It reads PRAGMA table_info(short_links) and runs ALTER TABLE short_links ADD COLUMN expires_at TEXT only when the column is missing. Pre-existing rows therefore get NULL (never expire). A fresh database already has the column and is skipped, and every later restart is a no-op.",
+      "traces": [
+        "FR-7"
+      ]
+    },
+    {
+      "name": "resources/schema.sql",
+      "responsibility": "CREATE TABLE IF NOT EXISTS short_links, now including the nullable expires_at column for fresh databases. It contains no ALTER statements, because the script runs on every boot.",
+      "traces": [
+        "FR-6",
+        "FR-7"
+      ]
+    },
+    {
+      "name": "docs (docs/API.md, README.md)",
+      "responsibility": "Documents the optional expiresInDays request field and its validation rules, the 410 Gone response on GET /{code}, the expiry semantics (N x 24h from createdAt, expired when now >= expiry), and that details and analytics are unaffected.",
+      "traces": [
+        "FR-1",
+        "FR-5",
+        "FR-6",
+        "FR-13"
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "name": "Startup schema initialisation and migration",
+      "steps": [
+        "Spring SQL init runs schema.sql. CREATE TABLE IF NOT EXISTS creates short_links with expires_at on a fresh database, and does nothing on an existing one.",
+        "SchemaMigrator (@DependsOnDatabaseInitialization) runs PRAGMA table_info(short_links).",
+        "If expires_at is missing, which is the case for a database created before this change, it runs ALTER TABLE short_links ADD COLUMN expires_at TEXT. Existing rows get NULL and never expire.",
+        "If expires_at is present, nothing happens, so the second and later restarts succeed.",
+        "ShortLinkRepository, which depends on SchemaMigrator, becomes available and the web server begins serving."
+      ]
+    },
+    {
+      "name": "Create short link (POST /api/links)",
+      "steps": [
+        "Jackson binds the body to CreateLinkRequest. url is a String and expiresInDays is a raw JsonNode, so no coercion happens. Unknown properties such as alias are ignored. A malformed body returns 400 and a non-JSON content type returns 415.",
+        "LinkService validates the URL. If it is invalid, InvalidUrlException produces 400 with the URL detail and nothing is persisted.",
+        "ExpiryPolicy validates expiresInDays. A null or NullNode value means no expiry. An integral node with a BigInteger value in 1..3650 is accepted. Anything else (0, negative, 3651, 99999999999999999999, 1.5, 7.0, 7e0, \"7\", or a boolean, object or array) throws InvalidExpiryException, giving 400 with the expiry detail. Nothing is persisted.",
+        "createdAt = clock.instant(). expiresAt = createdAt + days x 24h, or null.",
+        "A random 7-character base62 code is generated and repository.insert(code, url, createdAt, expiresAt) is called. On a code collision the service retries with a new code and the same createdAt and expiresAt.",
+        "The controller returns 201 with Location /api/links/{code} and a body of exactly shortCode, longUrl and createdAt."
+      ]
+    },
+    {
+      "name": "Redirect (GET /{code})",
+      "steps": [
+        "RedirectController calls LinkService.resolveAndCount(code) in a transaction, with now = clock.instant().",
+        "The repository runs UPDATE short_links SET click_count = click_count + 1, last_clicked_at = :now WHERE short_code = :code AND (expires_at IS NULL OR expires_at > :now).",
+        "If one row is updated, the service reads long_url and the controller returns 302 with Location set to the long URL and Cache-Control: no-store.",
+        "If no row is updated and existsByCode(code) is true, LinkExpiredException is thrown. The handler returns 410 problem+json with title 'Gone', detail 'short link has expired' and Cache-Control: no-store, and no Location header. Clicks are unchanged.",
+        "If no row is updated and the code does not exist, LinkNotFoundException is thrown and the handler returns 404 problem+json."
+      ]
+    },
+    {
+      "name": "Link details (GET /api/links/{code})",
+      "steps": [
+        "LinkController calls the repository's findByCode(code).",
+        "If the link is found, the controller returns 200 with exactly shortCode, longUrl and createdAt, whether or not the link has expired. expiresAt is not exposed.",
+        "If the link is not found, the response is 404 problem+json."
+      ]
+    },
+    {
+      "name": "Link analytics (GET /api/links/{code}/analytics)",
+      "steps": [
+        "LinkController loads the record by code.",
+        "If the link is found, the controller returns 200 with exactly shortCode, clickCount and lastClickedAt (null if never clicked), whether or not the link has expired.",
+        "If the link is not found, the response is 404 problem+json."
+      ]
+    }
+  ],
+  "error_model": "All errors are returned as application/problem+json with the fields type, title, status and detail. Stack traces are never included. Mappings by ProblemExceptionHandler:\n- 400 Bad Request, malformed or unreadable JSON body (HttpMessageNotReadableException): existing behaviour.\n- 400 Bad Request, InvalidUrlException: existing detail 'url must be an absolute http or https URL'.\n- 400 Bad Request, InvalidExpiryException (new): detail 'expiresInDays must be a whole-number JSON integer from 1 to 3650'. It covers 0, negative values, values above 3650 including huge integers (compared as BigInteger, so no overflow and no 500), fractional or exponent literals (1.5, 7.0, 7e0), strings (\"7\"), booleans, objects and arrays. Validation runs before any insert, so nothing is persisted.\n- 415 Unsupported Media Type, non-JSON content type: existing behaviour.\n- 404 Not Found, LinkNotFoundException: unknown code on GET /{code}, GET /api/links/{code} or GET /api/links/{code}/analytics. An unknown code on GET /{code} is never reported as 410.\n- 410 Gone, LinkExpiredException (new): only on GET /{code} for an existing link where now >= expires_at. Title 'Gone', detail 'short link has expired', header Cache-Control: no-store, no Location header. The click count and last-click time are not changed, because the conditional UPDATE matched no row.\n- 500 Internal Server Error, catch-all for unexpected exceptions: existing behaviour, with a generic detail.",
+  "traceability": [
+    {
+      "requirement_id": "FR-1",
+      "endpoints": [
+        "POST /api/links"
+      ],
+      "modules": [
+        "api.CreateLinkRequest",
+        "api.LinkController",
+        "service.LinkService",
+        "docs (docs/API.md, README.md)"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-2",
+      "endpoints": [
+        "POST /api/links"
+      ],
+      "modules": [
+        "service.ExpiryPolicy",
+        "service.LinkService",
+        "api.LinkController"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-3",
+      "endpoints": [
+        "POST /api/links"
+      ],
+      "modules": [
+        "api.CreateLinkRequest",
+        "service.ExpiryPolicy",
+        "service.InvalidExpiryException / service.LinkExpiredException",
+        "api.ProblemExceptionHandler"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-4",
+      "endpoints": [
+        "POST /api/links"
+      ],
+      "modules": [
+        "service.LinkService",
+        "persistence.ShortLinkRepository"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-5",
+      "endpoints": [
+        "GET /{code}"
+      ],
+      "modules": [
+        "api.RedirectController",
+        "service.LinkService",
+        "service.InvalidExpiryException / service.LinkExpiredException",
+        "api.ProblemExceptionHandler",
+        "config.ClockConfig"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-6",
+      "endpoints": [
+        "POST /api/links",
+        "GET /{code}"
+      ],
+      "modules": [
+        "service.ExpiryPolicy",
+        "service.LinkService",
+        "persistence.ShortLinkRepository",
+        "persistence.ShortLinkRecord",
+        "resources/schema.sql",
+        "config.ClockConfig"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-7",
+      "endpoints": [
+        "POST /api/links",
+        "GET /{code}"
+      ],
+      "modules": [
+        "persistence.SchemaMigrator",
+        "resources/schema.sql",
+        "persistence.ShortLinkRepository",
+        "persistence.ShortLinkRecord",
+        "service.LinkService"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-8",
+      "endpoints": [
+        "POST /api/links"
+      ],
+      "modules": [
+        "api.CreateLinkRequest",
+        "service.ExpiryPolicy",
+        "service.LinkService"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-9",
+      "endpoints": [
+        "POST /api/links"
+      ],
+      "modules": [
+        "api.CreateLinkRequest",
+        "service.ExpiryPolicy",
+        "api.ProblemExceptionHandler"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-10",
+      "endpoints": [
+        "GET /{code}",
+        "GET /api/links/{code}/analytics"
+      ],
+      "modules": [
+        "service.LinkService",
+        "persistence.ShortLinkRepository",
+        "config.ClockConfig"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-11",
+      "endpoints": [
+        "GET /{code}"
+      ],
+      "modules": [
+        "api.RedirectController",
+        "service.LinkService",
+        "persistence.ShortLinkRepository"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-12",
+      "endpoints": [
+        "GET /{code}"
+      ],
+      "modules": [
+        "service.LinkService",
+        "persistence.ShortLinkRepository",
+        "api.ProblemExceptionHandler",
+        "api.RedirectController"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-13",
+      "endpoints": [
+        "GET /api/links/{code}",
+        "GET /api/links/{code}/analytics"
+      ],
+      "modules": [
+        "api.LinkController",
+        "api.ShortLinkResponse / api.LinkAnalyticsResponse"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-14",
+      "endpoints": [
+        "POST /api/links",
+        "GET /api/links/{code}"
+      ],
+      "modules": [
+        "api.CreateLinkRequest",
+        "api.LinkController",
+        "api.ShortLinkResponse / api.LinkAnalyticsResponse"
+      ],
+      "catalog_ids": []
+    },
+    {
+      "requirement_id": "FR-15",
+      "endpoints": [
+        "GET /{code}"
+      ],
+      "modules": [
+        "api.ProblemExceptionHandler",
+        "service.InvalidExpiryException / service.LinkExpiredException"
+      ],
+      "catalog_ids": []
+    }
+  ],
+  "dependencies": [
+    "org.springframework.boot:spring-boot-starter-parent",
+    "org.springframework.boot:spring-boot-starter-web",
+    "org.springframework.boot:spring-boot-starter-jdbc",
+    "org.xerial:sqlite-jdbc",
+    "org.springframework.boot:spring-boot-starter-test",
+    "org.springframework.boot:spring-boot-maven-plugin"
+  ]
+}

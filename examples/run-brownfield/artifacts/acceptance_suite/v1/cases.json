@@ -1,0 +1,1829 @@
+[
+  {
+    "id": "TC-1",
+    "covers": "AC-1.1",
+    "title": "Create link with expiresInDays=7 returns 201 and Location /api/links/{code}",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 7-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":7}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "Location",
+            "op": "matches",
+            "value": "/api/links/[0-9A-Za-z]+$"
+          }
+        ],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Location target resolves to link details",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-2",
+    "covers": "AC-1.2",
+    "title": "Link created with expiresInDays=1 is accepted and redirects before expiry (pre-advance portion; the contract exposes no test-clock control)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Before 24h has elapsed the link is not gone",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": 410,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-3",
+    "covers": "AC-2.1",
+    "title": "Create with minimum expiresInDays=1 returns 201 with exactly shortCode, longUrl, createdAt",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with expiresInDays=1",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresInDays",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-4",
+    "covers": "AC-2.1",
+    "title": "Create with maximum expiresInDays=3650 returns 201 with exactly shortCode, longUrl, createdAt",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with expiresInDays=3650",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":3650}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresInDays",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-5",
+    "covers": "AC-2.2",
+    "title": "Link with expiresInDays=3650 redirects immediately with 302 to submitted URL",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with expiresInDays=3650",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":3650}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-6",
+    "covers": "AC-3.1",
+    "title": "expiresInDays=0 rejected with 400 problem+json mentioning expiry",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=0",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":0}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.detail",
+            "op": "matches",
+            "value": "(?i)expir"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-7",
+    "covers": "AC-3.1",
+    "title": "expiresInDays=-1 rejected with 400 problem+json mentioning expiry",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=-1",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":-1}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.detail",
+            "op": "matches",
+            "value": "(?i)expir"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-8",
+    "covers": "AC-3.1",
+    "title": "expiresInDays=1.5 rejected with 400 problem+json mentioning expiry",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=1.5",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1.5}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.detail",
+            "op": "matches",
+            "value": "(?i)expir"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-9",
+    "covers": "AC-3.1",
+    "title": "expiresInDays=\"7\" (string) rejected with 400 problem+json mentioning expiry",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with string expiresInDays",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":\"7\"}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.detail",
+            "op": "matches",
+            "value": "(?i)expir"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-10",
+    "covers": "AC-3.1",
+    "title": "expiresInDays=3651 rejected with 400 problem+json mentioning expiry",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=3651",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":3651}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.detail",
+            "op": "matches",
+            "value": "(?i)expir"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-11",
+    "covers": "AC-3.2",
+    "title": "Huge expiresInDays rejected with 400 (not 500) and no stack trace",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=99999999999999999999",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":99999999999999999999}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": 500,
+        "body_assertions": [
+          {
+            "target": "$body",
+            "op": "not_contains",
+            "value": "Exception"
+          },
+          {
+            "target": "$body",
+            "op": "not_contains",
+            "value": "stackTrace"
+          },
+          {
+            "target": "$body",
+            "op": "not_contains",
+            "value": "Traceback"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-12",
+    "covers": "AC-4.1",
+    "title": "Rejected expiresInDays=0 produces no Location header and no short code",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=0",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":0}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-13",
+    "covers": "AC-4.2",
+    "title": "Valid create after rejected invalid-expiry create succeeds and the valid link exists",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Invalid create with expiresInDays=0",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/invalid\",\"expiresInDays\":0}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Valid create",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":7}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Valid link details return 200",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-14",
+    "covers": "AC-5.1",
+    "title": "Link with expiresInDays=1 is live before expiry and is not answered with 410 (pre-advance portion; the contract exposes no test-clock control)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect before expiry",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": 410,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-15",
+    "covers": "AC-6.1",
+    "title": "Link with expiresInDays=2 redirects with 302 before the 48h boundary",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 2-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":2}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect before boundary",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-16",
+    "covers": "AC-6.2",
+    "title": "Link with expiresInDays=2 is not yet gone before creation + 48h (pre-boundary portion; the contract exposes no test-clock control)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 2-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":2}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect well before boundary is not 410",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": 410,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-17",
+    "covers": "AC-7.1",
+    "title": "Link created without expiresInDays redirects with 302 to long URL",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link without expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-18",
+    "covers": "AC-7.2",
+    "title": "Upgraded service is running and a non-expiring link redirects with 302 to its long URL (API-observable portion; data-store upgrade and restarts are performed outside the contract)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link without expiry (as a pre-existing link would have)",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/legacy\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect for link without expiry",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": 410,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/legacy"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-19",
+    "covers": "AC-8.1",
+    "title": "expiresInDays explicitly null is accepted with 201",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=null",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":null}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "matches",
+            "value": "/api/links/[0-9A-Za-z]+$"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-20",
+    "covers": "AC-8.2",
+    "title": "Link created with expiresInDays=null redirects with 302",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=null",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":null}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-21",
+    "covers": "AC-9.1",
+    "title": "expiresInDays=7.0 rejected with 400 problem+json and no Location",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=7.0",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":7.0}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          },
+          {
+            "target": "Location",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-22",
+    "covers": "AC-9.1",
+    "title": "expiresInDays=7e0 rejected with 400 problem+json and no Location",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with expiresInDays=7e0",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":7e0}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          },
+          {
+            "target": "Location",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-23",
+    "covers": "AC-10.1",
+    "title": "Single successful redirect on a 1-day link records clickCount=1 and a stable lastClickedAt (pre-advance portion; the contract exposes no test-clock control)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Single successful redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics after one redirect",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "1"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "last",
+            "json_path": "$.lastClickedAt"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics reads do not change recorded values",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "1"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "equals",
+            "value": "${last}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-24",
+    "covers": "AC-10.2",
+    "title": "Never-redirected 1-day link shows clickCount=0 and lastClickedAt=null (pre-advance portion; the contract exposes no test-clock control)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics for never-redirected link",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "0"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "equals",
+            "value": "null"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-25",
+    "covers": "AC-11.1",
+    "title": "Unexpired 5-day link redirects 302 with Location and Cache-Control no-store",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 5-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":5}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "Cache-Control",
+            "op": "equals",
+            "value": "no-store"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-26",
+    "covers": "AC-11.2",
+    "title": "Two redirects on an unexpired 5-day link yield clickCount=2 and non-null lastClickedAt",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 5-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":5}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Initial analytics shows zero clicks",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "0"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect twice",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 2,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics after two redirects",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "2"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-27",
+    "covers": "AC-12.1",
+    "title": "Unknown code zzzzzzz returns 404 problem+json",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Redirect unknown code",
+        "method": "GET",
+        "path": "/zzzzzzz",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 404,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Content-Type",
+            "op": "contains",
+            "value": "application/problem+json"
+          },
+          {
+            "target": "Location",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-28",
+    "covers": "AC-13.1",
+    "title": "Details of a 1-day link return 200 with exactly shortCode, longUrl, createdAt",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get link details",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresInDays",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.clickCount",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-29",
+    "covers": "AC-13.2",
+    "title": "Analytics of a 1-day link return 200 with exactly shortCode, clickCount, lastClickedAt",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          },
+          {
+            "target": "$.clickCount",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-30",
+    "covers": "AC-14.1",
+    "title": "Create with expiresInDays=7 returns exactly shortCode, longUrl, createdAt and no expiresAt",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 7-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":7}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresInDays",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-31",
+    "covers": "AC-14.2",
+    "title": "Create without expiresInDays returns 201 with Location and exactly the three fields",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with url only",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "matches",
+            "value": "/api/links/[0-9A-Za-z]+$"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-32",
+    "covers": "AC-14.2",
+    "title": "Unknown alias property is ignored: 201 with Location and exactly the three fields",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with ignored alias",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"alias\":\"mine\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/a"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.alias",
+            "op": "not_exists",
+            "value": null
+          },
+          {
+            "target": "$.expiresAt",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "matches",
+            "value": "/api/links/[0-9A-Za-z]+$"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-33",
+    "covers": "AC-15.1",
+    "title": "Redirect responses for a 1-day link carry Cache-Control: no-store (pre-advance portion; the contract exposes no test-clock control)",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link with 1-day expiry",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\",\"expiresInDays\":1}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect response has no-store",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Cache-Control",
+            "op": "equals",
+            "value": "no-store"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  }
+]

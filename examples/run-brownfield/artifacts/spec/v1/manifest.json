@@ -1,0 +1,29 @@
+{
+  "type": "spec",
+  "version": 1,
+  "produced_by": "R4",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:02:45.399Z",
+  "inputs": [
+    {
+      "type": "analysis",
+      "version": 3,
+      "hash": "sha256:134ab3e3b5c182c34fced6cfc267aceb62118cabcaa1ee198945fe4dbdd59c38"
+    },
+    {
+      "type": "requirement_input",
+      "version": 1,
+      "hash": "sha256:9d7e2b8e5f8e3755d83452bb1472ef74bbd2ede9eeadae7b322bfcaa952e5c5e"
+    },
+    {
+      "type": "clarifications",
+      "version": 2,
+      "hash": "sha256:4af9e0f8bf4c190db4e84cd04c2fd0f6d8a99cf12259e84d371eae8bdb782d33"
+    }
+  ],
+  "files": {
+    "spec.json": "sha256:f61e08905074ad16e1afa589651db6c7ee4bce2850a6dbe10252f70373975298",
+    "requirements.md": "sha256:4c0342d9d708872552ab6e8fba21ea7995c731b7305ad0373371c6c814ce0cb5"
+  },
+  "hash": "sha256:364e3610e591ddb991b29df18c4bb97ffaa2d43a9e14c80f558c09bd74f8588c"
+}

@@ -1,0 +1,131 @@
+{
+  "intent": "Let clients optionally set an expiry in days when creating a short link, so that the redirect endpoint returns 410 Gone once the link has expired, while links created without an expiry never expire.",
+  "functional_needs": [
+    {
+      "statement": "POST /api/links accepts an optional expiry value, expressed in days, when a short link is created.",
+      "source_quote": "when creating a short link the client may give an expiry in days"
+    },
+    {
+      "statement": "Once a link's expiry has passed, GET /{code} returns 410 Gone instead of a 302 redirect.",
+      "source_quote": "After it expires, the redirect returns 410 Gone instead of redirecting."
+    },
+    {
+      "statement": "A link created without an expiry never expires. This includes all links that existed before this change. Such links keep redirecting with 302 indefinitely.",
+      "source_quote": "Links without an expiry never expire."
+    },
+    {
+      "statement": "The only valid expiry values are whole-number JSON integers from 1 to 3650 inclusive.",
+      "source_quote": "Accept only whole-number JSON integers from 1 to 3650 inclusive."
+    },
+    {
+      "statement": "An expiry value that is zero, negative, fractional, a string (e.g. \"7\") or outside 1..3650 is rejected with 400 application/problem+json. The detail must describe the expiry problem.",
+      "source_quote": "Reject zero, negative, fractional, string and out-of-range values with 400 application/problem+json whose detail describes the expiry problem."
+    },
+    {
+      "statement": "When an expiry value is rejected, no link is persisted.",
+      "source_quote": "Persist nothing on rejection."
+    },
+    {
+      "statement": "A 410 response for an expired link does not change clickCount or lastClickedAt. Only successful 302 redirects are counted.",
+      "source_quote": "Only successful 302 redirects are counted. A 410 response leaves clickCount and lastClickedAt unchanged."
+    },
+    {
+      "statement": "For an expired link, GET /api/links/{code} and GET /api/links/{code}/analytics keep returning 200 with their current fields. Only the redirect endpoint returns 410.",
+      "source_quote": "Keep returning 200 with the current fields. Only the redirect endpoint returns 410."
+    },
+    {
+      "statement": "No new response field (such as expiresAt) is added. Create and details responses stay exactly as they are today.",
+      "source_quote": "Do not add any new response field. Keep create and details responses exactly as today"
+    },
+    {
+      "statement": "Compatibility: a create request without an expiry field still returns 201 with the same Location header and body as today.",
+      "source_quote": "Keep create and details responses exactly as today"
+    },
+    {
+      "statement": "Compatibility: for a link that has not expired, GET /{code} still returns 302 with Location set to the long URL and Cache-Control: no-store, and increments clickCount by exactly one and updates lastClickedAt.",
+      "source_quote": "Only successful 302 redirects are counted."
+    },
+    {
+      "statement": "Compatibility: GET /{code} for an unknown code still returns 404, not 410. 410 is returned only for existing links that have expired.",
+      "source_quote": "After it expires, the redirect returns 410 Gone"
+    },
+    {
+      "statement": "Compatibility: the 410 response uses the existing application/problem+json error format (type, title, status, detail) with title 'Gone'.",
+      "source_quote": "the redirect returns 410 Gone"
+    },
+    {
+      "statement": "Compatibility: unknown JSON properties in the create request (e.g. \"alias\") are still ignored and the request still returns 201. Strict type checking applies only to the expiry field.",
+      "source_quote": "the client may give an expiry in days"
+    }
+  ],
+  "nfr_asks": [],
+  "ambiguities": [
+    {
+      "id": "Q-1",
+      "question": "What exact name should the optional expiry field have in the POST /api/links JSON body?",
+      "why_it_matters": "The field name is part of the public API contract. Clients and acceptance tests must send exactly this name. Because unknown properties are ignored, a misnamed field would be silently dropped and the link would never expire.",
+      "recommended_default": "expiresInDays",
+      "severity": "BLOCKING",
+      "options": [
+        "expiresInDays",
+        "expiryDays",
+        "ttlDays"
+      ]
+    },
+    {
+      "id": "Q-2",
+      "question": "How should an explicit JSON null for the expiry field be treated?",
+      "why_it_matters": "It decides whether {\"url\":...,\"expiresInDays\":null} returns 201 with a never-expiring link or 400.",
+      "recommended_default": "Treat explicit null the same as an absent field: return 201 and create a link that never expires.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Treat as absent (never expires)",
+        "Reject with 400 problem+json"
+      ]
+    },
+    {
+      "id": "Q-3",
+      "question": "Is a JSON number with an integral value but written with a fraction or exponent (e.g. 7.0 or 7e0) a valid 'whole-number JSON integer'?",
+      "why_it_matters": "It decides whether such inputs return 201 or 400 under C-1.",
+      "recommended_default": "Reject with 400. Only JSON integer literals are accepted.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Reject with 400 (integer literals only)",
+        "Accept if the value is integral"
+      ]
+    },
+    {
+      "id": "Q-4",
+      "question": "How is the expiry instant defined, and is a link expired at exactly that instant?",
+      "why_it_matters": "It sets the exact moment a link switches from 302 to 410. The difference is only observable at the boundary.",
+      "recommended_default": "expiresAt = createdAt + N × 24 hours (UTC). The link is expired when now >= expiresAt.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "createdAt + N×24h, expired when now >= expiresAt",
+        "createdAt + N×24h, expired when now > expiresAt",
+        "End of the Nth calendar day (UTC) after creation"
+      ]
+    },
+    {
+      "id": "Q-5",
+      "question": "What detail text and headers should the 410 problem+json response carry?",
+      "why_it_matters": "Clients may display or log the detail. Caching headers affect whether intermediaries cache the 410.",
+      "recommended_default": "Return status 410, title 'Gone', and a detail such as 'short link has expired', with Cache-Control: no-store as on the redirect.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Generic detail with Cache-Control: no-store",
+        "Generic detail with no cache header",
+        "Detail including the expiry time"
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "Adding any new response field (e.g. expiresAt) to the create or details responses (per C-4)",
+    "Returning 410 from GET /api/links/{code} or GET /api/links/{code}/analytics for expired links (per C-3)",
+    "Counting clicks or updating lastClickedAt on 410 responses (per C-2)",
+    "Expiry units other than whole days, and values outside 1..3650 (per C-1)",
+    "Changing or removing a link's expiry after creation (not requested)",
+    "Deleting or purging expired links (not requested)"
+  ],
+  "stack_constraint": null
+}

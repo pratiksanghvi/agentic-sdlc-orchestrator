@@ -1,0 +1,9 @@
+{
+  "findings": [],
+  "checks": {
+    "S1_secrets": "detect-secrets",
+    "S4_change_control": "orchestrator",
+    "S2_sast": "not in MVP (Semgrep cut for the deadline)",
+    "S3_dependency_cves": "not in MVP (needs a separately installed scanner)"
+  }
+}

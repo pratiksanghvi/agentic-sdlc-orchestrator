@@ -1,0 +1,12 @@
+{
+  "type": "requirement_input",
+  "version": 1,
+  "produced_by": "R1",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:00:03.647Z",
+  "inputs": [],
+  "files": {
+    "requirement.txt": "sha256:b3a88d1f96c3e62e9dc91c3965d9cc3138c39046efd8296d7776ccfab7309e65"
+  },
+  "hash": "sha256:9d7e2b8e5f8e3755d83452bb1472ef74bbd2ede9eeadae7b322bfcaa952e5c5e"
+}

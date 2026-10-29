@@ -285,7 +285,7 @@ Resume after shutdown (LangGraph SQLite checkpointer, `runs list` / `resume`, re
 |---|---|---|
 | Greenfield | Loose requirement → new Java URL shortener v0.1.0 | ✅ M2–M8 (live: 24/24 acceptance, accepted) |
 | Ambiguous | Vague requirement → R2 classifies blocking ambiguities → R3 clarification → assumptions logged → approval | ✅ M2 (no extra build) |
-| Brownfield | Enhancement request against the accepted v0.1.0 → Stage 0 impact analysis (approved) → only new/changed requirements → complete OpenAPI incl. existing endpoints → modify-not-scaffold tasks → v0.2.0 | ✅ M10 |
+| Brownfield | Enhancement request against the accepted v0.1.0 → Stage 0 impact analysis (approved) → only new/changed requirements → complete OpenAPI incl. existing endpoints → modify-not-scaffold tasks → v0.2.0 | ✅ M10 (live: 33/33 acceptance, accepted as v0.2.0) |
 
 ---
 

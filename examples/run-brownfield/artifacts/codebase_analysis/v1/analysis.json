@@ -1,0 +1,249 @@
+{
+  "summary": "A public (unauthenticated) Spring Boot 3 / Java 21 URL shortener backed by SQLite through JdbcTemplate. Clients POST an absolute http/https URL and receive a new, independent short link with a random 7-character base62 code. GET /{code} returns a 302 redirect to the long URL and atomically increments the click count and last-click timestamp. Separate endpoints return link details and click analytics. Errors are returned as application/problem+json, and unknown codes return 404.",
+  "endpoints": [
+    {
+      "endpoint": "POST /api/links",
+      "purpose": "Create a new short link from JSON {url}. Returns 201 with a Location header /api/links/{code} and a ShortLink body (shortCode, longUrl, createdAt). Returns 400 for an invalid or malformed body, 415 for a non-JSON content type, and 500 for unexpected errors."
+    },
+    {
+      "endpoint": "GET /api/links/{code}",
+      "purpose": "Return link details (shortCode, longUrl, createdAt). Returns 404 if the code is unknown."
+    },
+    {
+      "endpoint": "GET /api/links/{code}/analytics",
+      "purpose": "Return click analytics (shortCode, clickCount, lastClickedAt, which is null if the link was never clicked). Returns 404 if the code is unknown."
+    },
+    {
+      "endpoint": "GET /{code}",
+      "purpose": "Return a 302 redirect with Location set to the long URL and Cache-Control: no-store, and count the click. Returns 404 if the code is unknown."
+    }
+  ],
+  "modules": [
+    {
+      "name": "ShortenerApplication",
+      "detail": "Spring Boot entry point."
+    },
+    {
+      "name": "ServiceReadyListener",
+      "detail": "Prints 'SERVICE_READY port=<port>' on ApplicationReadyEvent."
+    },
+    {
+      "name": "api.LinkController",
+      "detail": "Handles /api/links: create (POST), details (GET /{code}) and analytics (GET /{code}/analytics). Maps ShortLinkRecord to response DTOs and converts Instants with toString()."
+    },
+    {
+      "name": "api.RedirectController",
+      "detail": "Handles GET /{code}. Calls LinkService.resolveAndCount and returns a 302 with Location and Cache-Control: no-store."
+    },
+    {
+      "name": "api.ProblemExceptionHandler",
+      "detail": "@RestControllerAdvice that maps exceptions to problem+json responses: InvalidUrlException→400, HttpMessageNotReadable→400, HttpMediaTypeNotSupported→415, LinkNotFoundException→404, other ErrorResponse→its own status, and anything else→500 (logged)."
+    },
+    {
+      "name": "api.CreateLinkRequest",
+      "detail": "Record(String url). This is the request body for create. Unknown JSON properties are ignored (Spring Boot default Jackson config)."
+    },
+    {
+      "name": "api.ShortLinkResponse / api.LinkAnalyticsResponse",
+      "detail": "Response records: ShortLinkResponse(shortCode, longUrl, createdAt) and LinkAnalyticsResponse(shortCode, clickCount, lastClickedAt)."
+    },
+    {
+      "name": "service.LinkService",
+      "detail": "Business logic. create validates the URL, generates a code, inserts with up to 5 retries on DuplicateKeyException, then re-reads the row. getDetails/getAnalytics call findByCode or throw LinkNotFoundException. resolveAndCount (@Transactional) runs incrementClick first, throws not-found if 0 rows are updated, then reads long_url. All times come from Instant.now(); there is no injectable Clock."
+    },
+    {
+      "name": "service.UrlValidator",
+      "detail": "Rejects null/blank values, unparseable URIs, non-absolute URIs, non-http(s) schemes and URLs with an empty host by throwing InvalidUrlException."
+    },
+    {
+      "name": "service.ShortCodeGenerator",
+      "detail": "Uses SecureRandom to produce 7-character codes from the base62 alphabet."
+    },
+    {
+      "name": "service.InvalidUrlException / LinkNotFoundException",
+      "detail": "Domain exceptions that map to 400 and 404."
+    },
+    {
+      "name": "persistence.ShortLinkRecord",
+      "detail": "Record(shortCode, longUrl, Instant createdAt, long clickCount, Instant lastClickedAt)."
+    },
+    {
+      "name": "persistence.ShortLinkRepository",
+      "detail": "JdbcTemplate DAO. Stores timestamps as fixed-width UTC text 'yyyy-MM-ddTHH:mm:ss.SSSSSSZ', truncated to microseconds. Methods: insert (translates SQLite UNIQUE violation to DuplicateKeyException), findByCode, incrementClick (UPDATE ... returns row count) and findLongUrl."
+    },
+    {
+      "name": "resources/schema.sql + application.properties",
+      "detail": "schema.sql uses CREATE TABLE/INDEX IF NOT EXISTS and runs on every startup (spring.sql.init.mode=always). application.properties sets PORT (default 8080), DB_PATH (default app.db), a single-connection Hikari pool and problemdetails enabled."
+    }
+  ],
+  "tables": [
+    {
+      "name": "short_links",
+      "detail": "Columns: id INTEGER PK AUTOINCREMENT; short_code TEXT NOT NULL UNIQUE (plus a redundant unique index ux_short_links_short_code); long_url TEXT NOT NULL; created_at TEXT NOT NULL (ISO-8601 UTC, microseconds); click_count INTEGER NOT NULL DEFAULT 0 CHECK >= 0; last_clicked_at TEXT nullable. There is no expiry column."
+    }
+  ],
+  "data_flows": [
+    {
+      "name": "Create link",
+      "steps": [
+        "Client sends POST /api/links with Content-Type application/json and body {url}.",
+        "Jackson binds the body to CreateLinkRequest. A malformed or missing body returns 400; a wrong content type returns 415.",
+        "UrlValidator.validate(url) runs; an invalid URL returns 400 via InvalidUrlException and nothing is persisted.",
+        "createdAt is set to Instant.now().",
+        "Loop of up to 5 attempts: generate a code and insert the row (click_count 0, last_clicked_at NULL). A DuplicateKeyException triggers a retry.",
+        "findByCode re-reads the row.",
+        "Controller returns 201 with Location /api/links/{code} and body {shortCode, longUrl, createdAt}."
+      ]
+    },
+    {
+      "name": "Get details",
+      "steps": [
+        "Client sends GET /api/links/{code}.",
+        "LinkService.getDetails calls findByCode, or throws LinkNotFoundException (404 problem+json).",
+        "Controller returns 200 with {shortCode, longUrl, createdAt}."
+      ]
+    },
+    {
+      "name": "Get analytics",
+      "steps": [
+        "Client sends GET /api/links/{code}/analytics.",
+        "LinkService.getAnalytics delegates to getDetails, which calls findByCode or returns 404.",
+        "Controller returns 200 with {shortCode, clickCount, lastClickedAt or null}."
+      ]
+    },
+    {
+      "name": "Redirect",
+      "steps": [
+        "Client sends GET /{code}.",
+        "LinkService.resolveAndCount runs inside a transaction.",
+        "UPDATE short_links SET click_count = click_count + 1, last_clicked_at = now WHERE short_code = ?",
+        "If 0 rows are updated, LinkNotFoundException is thrown and the response is 404 problem+json.",
+        "findLongUrl(code) is read.",
+        "Controller returns 302 with Location: longUrl and Cache-Control: no-store."
+      ]
+    }
+  ],
+  "impacted": [
+    {
+      "name": "resources/schema.sql (table short_links)",
+      "detail": "Needs a new nullable column, e.g. expires_at TEXT, where NULL means the link never expires. CREATE TABLE IF NOT EXISTS will not add the column to existing app.db files. An idempotent migration is required. SQLite has no ADD COLUMN IF NOT EXISTS, and the script runs on every startup, so a plain ALTER TABLE would fail on the second start. A PRAGMA table_info check in Java or a migration tool is needed."
+    },
+    {
+      "name": "api.CreateLinkRequest",
+      "detail": "Add an optional expiry-in-days field (name to be decided, e.g. expiresInDays, as Integer/Long so that 'absent' is distinguishable)."
+    },
+    {
+      "name": "service.LinkService.create",
+      "detail": "Validate the optional days value: reject zero, negative, non-integral and too-large values with 400. Compute expiresAt = createdAt + days and pass it to the repository."
+    },
+    {
+      "name": "Validation / new exception",
+      "detail": "InvalidUrlException's handler hard-codes the detail 'url must be an absolute http or https URL'. Expiry validation needs its own exception, or a generalised handler, so the 400 detail is accurate."
+    },
+    {
+      "name": "service.LinkService.resolveAndCount",
+      "detail": "Must detect expiry and fail with a new LinkExpiredException instead of redirecting. Today it increments before reading, so an expired link would still be counted unless the logic changes. One option is UPDATE ... WHERE short_code=? AND (expires_at IS NULL OR expires_at > now), then a lookup to tell unknown (404) apart from expired (410)."
+    },
+    {
+      "name": "service.LinkExpiredException (new)",
+      "detail": "New domain exception that maps to 410 Gone."
+    },
+    {
+      "name": "api.ProblemExceptionHandler",
+      "detail": "Add a handler for LinkExpiredException that returns 410 problem+json with title 'Gone'. Without it, the catch-all would return 500."
+    },
+    {
+      "name": "GET /{code} (RedirectController)",
+      "detail": "Gains a new 410 response for expired links. The 302 and 404 behaviour is otherwise unchanged."
+    },
+    {
+      "name": "POST /api/links (LinkController.create)",
+      "detail": "Accepts the new optional field and passes it to the service. The response likely gains an expiresAt field."
+    },
+    {
+      "name": "api.ShortLinkResponse and LinkController.toResponse",
+      "detail": "Optionally expose expiresAt (null when the link never expires) in create and details responses. This is an additive response field."
+    },
+    {
+      "name": "persistence.ShortLinkRecord",
+      "detail": "Add an Instant expiresAt component. This changes the canonical constructor, so the MAPPER and all constructor call sites must be updated."
+    },
+    {
+      "name": "persistence.ShortLinkRepository",
+      "detail": "Changes needed in: insert (signature and SQL), the MAPPER and the SELECT column list in findByCode, and incrementClick/findLongUrl (expiry-aware query or a separate expiry lookup). expires_at must use the same fixed-width format() so SQLite text comparison orders correctly."
+    },
+    {
+      "name": "GET /api/links/{code} and /analytics",
+      "detail": "Not required to change by the request, but must be explicitly decided. The assumption is that they keep returning 200 for expired links. Details may show expiresAt."
+    },
+    {
+      "name": "Time source (Instant.now in LinkService)",
+      "detail": "Testing expiry measured in days needs an injectable java.time.Clock bean, or direct DB manipulation in tests."
+    },
+    {
+      "name": "Tests: ShortLinkRepositoryTest",
+      "detail": "Calls repo.insert(code, url, instant) and will break if the signature changes, unless an overload is kept. Needs new tests for storing and reading expiry."
+    },
+    {
+      "name": "Tests: LinkServiceTest",
+      "detail": "Needs new cases: expiry computation, invalid days, an expired link throwing LinkExpiredException without incrementing clicks, and links without expiry never expiring."
+    },
+    {
+      "name": "Tests: LinkApiTest",
+      "detail": "Needs new cases: create with expiry, 400 for bad expiry values, 410 problem+json on an expired redirect, 404 still returned for unknown codes, and details/analytics behaviour for expired links. Existing tests should pass unchanged."
+    },
+    {
+      "name": "Tests: ShortenerApplicationTests",
+      "detail": "Schema-apply smoke test. It should also confirm that the migration runs on a fresh DB and on a pre-existing DB."
+    },
+    {
+      "name": "docs/API.md and README.md",
+      "detail": "Document the new request field, the response field, the 410 response on GET /{code}, and the expiry semantics."
+    }
+  ],
+  "compatibility_risks": [
+    "Create requests without an expiry field must still return 201 with the same Location and body. The resulting links must never expire. A required field or a non-null default would break existing clients.",
+    "Existing databases created before the change lack expires_at. If schema.sql only edits CREATE TABLE IF NOT EXISTS, every SELECT or INSERT that references expires_at fails with a 500 on upgraded deployments. A non-idempotent ALTER TABLE in schema.sql would make the second startup fail, because the script runs on every boot. Existing rows must end up with NULL (never expire).",
+    "Unknown JSON properties are currently ignored: LinkApiTest sends \"alias\":\"mine\" and expects 201. Enabling strict deserialization to validate the new field would break this and the 'no custom alias' contract.",
+    "GET /{code} for an unknown code must stay 404, not 410. Valid, non-expired links must keep the 302 with the Location header and Cache-Control: no-store.",
+    "Click semantics: each successful redirect increments click_count by exactly one and updates last_clicked_at. With the current increment-then-read order, a naive expiry check placed after the increment would count clicks on expired links. Product needs to confirm that 410 responses are not counted. The expiry check and increment should be atomic (single UPDATE with an expiry predicate, or check-then-update within the existing transaction).",
+    "Details and analytics endpoints must keep returning 200 with their current fields for every existing link. Whether expired links return 200 or 410 there is unspecified; returning 410 would change existing contracts.",
+    "Adding expiresAt to ShortLinkResponse is additive, but Jackson serialises nulls by default. Non-expiring links would then show \"expiresAt\": null, which strict clients may not expect. This is acceptable but must be documented.",
+    "Error format must stay application/problem+json with type, title, status and detail. The new 410 must follow it with title 'Gone'. A missing handler would produce a 500 via the catch-all.",
+    "Validation of days: Jackson by default coerces strings ('7'→7) and truncates floats (1.9→1). Very large values can overflow Instant.plus and produce a 500, or yield years beyond 9999 that break the fixed-width timestamp format and lexicographic comparison. Zero and negative values need a defined 400. Validation failures must not persist a row, mirroring the 'invalid URL persists nothing' guarantee.",
+    "Boundary semantics at exactly expiresAt (expired when now >= expiresAt?) and the meaning of 'days' (24h multiples from createdAt vs calendar days) must be defined. All comparisons must use the same UTC microsecond text format so SQLite string comparison stays correct.",
+    "Changing the ShortLinkRecord constructor and ShortLinkRepository.insert signature breaks compilation of existing callers and ShortLinkRepositoryTest unless overloads are kept or the tests are updated.",
+    "Retry-on-collision logic in create must still pass expiresAt on every attempt, and createdAt and expiresAt must be derived from the same instant."
+  ],
+  "stack": "java21-springboot3-maven",
+  "head": "9c093950d4aac60f55a70819a99566be4599300a",
+  "branch": "master",
+  "files": [
+    "README.md",
+    "docs/API.md",
+    "pom.xml",
+    "src/main/java/com/example/shortener/ServiceReadyListener.java",
+    "src/main/java/com/example/shortener/ShortenerApplication.java",
+    "src/main/java/com/example/shortener/api/CreateLinkRequest.java",
+    "src/main/java/com/example/shortener/api/LinkAnalyticsResponse.java",
+    "src/main/java/com/example/shortener/api/LinkController.java",
+    "src/main/java/com/example/shortener/api/ProblemExceptionHandler.java",
+    "src/main/java/com/example/shortener/api/RedirectController.java",
+    "src/main/java/com/example/shortener/api/ShortLinkResponse.java",
+    "src/main/java/com/example/shortener/persistence/ShortLinkRecord.java",
+    "src/main/java/com/example/shortener/persistence/ShortLinkRepository.java",
+    "src/main/java/com/example/shortener/service/InvalidUrlException.java",
+    "src/main/java/com/example/shortener/service/LinkNotFoundException.java",
+    "src/main/java/com/example/shortener/service/LinkService.java",
+    "src/main/java/com/example/shortener/service/ShortCodeGenerator.java",
+    "src/main/java/com/example/shortener/service/UrlValidator.java",
+    "src/main/resources/application.properties",
+    "src/main/resources/schema.sql",
+    "src/test/java/com/example/shortener/ShortenerApplicationTests.java",
+    "src/test/java/com/example/shortener/api/LinkApiTest.java",
+    "src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java",
+    "src/test/java/com/example/shortener/service/LinkServiceTest.java",
+    "src/test/java/com/example/shortener/service/ShortCodeGeneratorTest.java",
+    "src/test/java/com/example/shortener/service/UrlValidatorTest.java"
+  ]
+}

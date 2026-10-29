@@ -1,0 +1,207 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener API
+  version: 1.1.0
+  description: Public URL shortener. Short links can optionally expire after a whole number of days; expired links return 410 Gone on redirect.
+paths:
+  /api/links:
+    post:
+      operationId: createLink
+      summary: Create a new short link, optionally with an expiry in days
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkRequest'
+      responses:
+        '201':
+          description: Short link created
+          headers:
+            Location:
+              description: URI of the created link, /api/links/{code}
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/links/{code}:
+    get:
+      operationId: getLink
+      summary: Get link details (returned with 200 even if the link has expired)
+      parameters:
+        - $ref: '#/components/parameters/Code'
+      responses:
+        '200':
+          description: Link details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/links/{code}/analytics:
+    get:
+      operationId: getLinkAnalytics
+      summary: Get click analytics (returned with 200 even if the link has expired)
+      parameters:
+        - $ref: '#/components/parameters/Code'
+      responses:
+        '200':
+          description: Click analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkAnalytics'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /{code}:
+    get:
+      operationId: redirect
+      summary: Redirect to the long URL and count the click; 410 if the link has expired (not counted)
+      parameters:
+        - $ref: '#/components/parameters/Code'
+      responses:
+        '302':
+          description: Redirect to the long URL. The click is counted.
+          headers:
+            Location:
+              description: The long URL
+              schema:
+                type: string
+                format: uri
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    Code:
+      name: code
+      in: path
+      required: true
+      description: Short code (7-character base62)
+      schema:
+        type: string
+  headers:
+    CacheControlNoStore:
+      description: Always no-store
+      schema:
+        type: string
+        enum:
+          - no-store
+  schemas:
+    CreateLinkRequest:
+      type: object
+      required:
+        - url
+      additionalProperties: true
+      description: Unknown properties (e.g. alias) are ignored.
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Absolute http or https URL
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 3650
+          nullable: true
+          description: Optional. A whole-number JSON integer literal from 1 to 3650. The link expires at createdAt + N x 24h (UTC) and counts as expired when now >= that instant. Absent or null means the link never expires. Strings, fractions or exponents (7.0, 7e0), zero, negative and out-of-range values are rejected with 400.
+    ShortLink:
+      type: object
+      required:
+        - shortCode
+        - longUrl
+        - createdAt
+      properties:
+        shortCode:
+          type: string
+        longUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+    LinkAnalytics:
+      type: object
+      required:
+        - shortCode
+        - clickCount
+        - lastClickedAt
+      properties:
+        shortCode:
+          type: string
+        clickCount:
+          type: integer
+          format: int64
+        lastClickedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: null if the link has never been clicked
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid or malformed body, invalid URL, or invalid expiresInDays
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Unknown short code
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Gone:
+      description: The short link exists but has expired. No Location header is sent and the click is not counted.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlNoStore'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Content type is not application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: Unexpected error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'

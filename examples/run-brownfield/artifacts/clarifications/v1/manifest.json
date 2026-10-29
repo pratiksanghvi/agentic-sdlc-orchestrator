@@ -1,0 +1,18 @@
+{
+  "type": "clarifications",
+  "version": 1,
+  "produced_by": "R3",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:00:37.202Z",
+  "inputs": [
+    {
+      "type": "analysis",
+      "version": 1,
+      "hash": "sha256:10c483740e4c8e30c9fd438a63edc04997fbe98ab1985f5c0586bdaac8b4a5fe"
+    }
+  ],
+  "files": {
+    "clarifications.json": "sha256:c89ab285c0dcfa6965b7f3d2aa53f27619824b82c4007fbba89356b73cc938c1"
+  },
+  "hash": "sha256:efa33924e02779cfddac90e291d395424b72b3a4dc2cff172cd185176d8bfcdf"
+}

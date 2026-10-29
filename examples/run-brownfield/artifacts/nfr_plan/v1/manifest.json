@@ -1,0 +1,23 @@
+{
+  "type": "nfr_plan",
+  "version": 1,
+  "produced_by": "D3",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:03:11.419Z",
+  "inputs": [
+    {
+      "type": "spec",
+      "version": 1,
+      "hash": "sha256:364e3610e591ddb991b29df18c4bb97ffaa2d43a9e14c80f558c09bd74f8588c"
+    },
+    {
+      "type": "stack_adr",
+      "version": 1,
+      "hash": "sha256:4fb9a16b0d9e2727a8269ad8b1dfa0fd2412de33bd2b077de3e77e217522658b"
+    }
+  ],
+  "files": {
+    "nfr_plan.json": "sha256:c75e7a9dba7afcf230022279eca033a57812a58b146702287fb8a3402a354448"
+  },
+  "hash": "sha256:30709677c82bc41242af172cde5e2761986444b40b62888370f5d93e45560c31"
+}

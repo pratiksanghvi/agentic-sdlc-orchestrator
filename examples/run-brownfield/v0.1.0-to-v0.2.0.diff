@@ -1,0 +1,1116 @@
+diff --git a/README.md b/README.md
+index ca46b3c..dec14ec 100644
+--- a/README.md
++++ b/README.md
+@@ -1,21 +1,31 @@
+-# URL Shortener Service with Click Analytics
++# URL Shortener API
+ 
+-Create short links, redirect by short code (HTTP 302) and read per-link details and click analytics. All operations are public (no authentication).
++A public URL shortener service (API version 1.1.0). It creates short links for long URLs, redirects short codes to the long URL, and reports link details and click analytics. Short links can optionally expire after a whole number of days; an expired link returns `410 Gone` on redirect.
+ 
+ ## Features
+ 
+-- Submit a long URL and receive a new short link identified by a service-generated short code. Clients cannot supply a custom alias.
+-- Each create submission produces a new, independent short link with its own short code and click count, even if the same long URL was submitted before.
+-- Only absolute http or https URLs are accepted. Any other value is rejected with a 4xx response and no short link is created.
+-- Requesting a short code redirects (302) to the original long URL.
+-- Each successful redirect increments the click count by exactly one and records the timestamp of the most recent click. There is no de-duplication or bot filtering.
+-- Retrieve a short link's details (short code, original long URL, creation timestamp).
+-- Retrieve a short link's analytics (total click count and last-click timestamp) through a separate per-link call. A link never clicked reports a click count of 0 and a null last-click timestamp.
+-- Redirect, details and analytics return 404 Not Found for an unknown short code.
++- Create a short link with `POST /api/links`, optionally with `expiresInDays` (integer 1 to 3650).
++- Redirect with `GET /{code}` (302, `Cache-Control: no-store`, click counted).
++- Expired links return 410 with `application/problem+json` and no `Location` header; the click is not counted.
++- Links created without `expiresInDays` (or with `null`) never expire. This includes all links that existed before this change.
++- Get link details with `GET /api/links/{code}` and analytics with `GET /api/links/{code}/analytics`; both return 200 even for expired links.
++- No `expiresAt` field is exposed in any response.
++
++The field name `expiresInDays` rests on assumption A-1 (open question Q-1, pending reviewer confirmation).
++
++## Expiry rules
++
++- Expiry instant = creation time + N x 24 hours (UTC). The link is expired when the current time is >= the expiry instant.
++- Accepted: whole-number JSON integer from 1 to 3650 inclusive.
++- Rejected with 400: zero, negative, fractional, string (e.g. `"7"`), out of range, and numbers written with a fraction or exponent (`7.0`, `7e0`). Nothing is persisted on rejection.
++- Unknown request properties (e.g. `alias`) are ignored.
+ 
+ ## Prerequisites
+ 
+-- Stack: java21-springboot3-maven (Java 21 and Maven).
++- Java 21
++- Maven
++
++Stack: java21-springboot3-maven.
+ 
+ ## Build and test
+ 
+@@ -31,23 +41,23 @@ sh -c java -jar target/*.jar
+ 
+ ## Configuration
+ 
+-Environment variables:
+-
+ | Variable | Description |
+-|----------|-------------|
+-| PORT | HTTP port (required) |
+-| DB_PATH | SQLite database file path (default `app.db`) |
++|---|---|
++| `PORT` | HTTP port (required) |
++| `DB_PATH` | SQLite database file path (default `app.db`) |
+ 
+-## Non-functional features
++## Readiness
+ 
+-None specified.
+-
+-## Startup readiness line
+-
+-When the service is ready it prints:
++On startup the service prints:
+ 
+ ```
+ SERVICE_READY port=<port>
+ ```
+ 
+-See [docs/API.md](docs/API.md) for the API reference.
++## Non-functional requirements
++
++Not specified.
++
++## API documentation
++
++See [docs/API.md](docs/API.md).
+diff --git a/docs/API.md b/docs/API.md
+index af3069e..bbe0977 100644
+--- a/docs/API.md
++++ b/docs/API.md
+@@ -1,84 +1,81 @@
+ # API Reference
+ 
+-All operations are public (no authentication). Error responses use `application/problem+json` with fields `type`, `title`, `status`, `detail`.
+-
+-Examples assume the service is listening on `localhost:8080` (i.e. `PORT=8080`).
++URL Shortener API, version 1.1.0. Errors use `application/problem+json` with fields `type`, `title`, `status`, `detail`.
+ 
+ ## POST /api/links
+ 
+-Create a new short link for an absolute http/https URL. A new independent link is created on every call.
++Create a new short link, optionally with an expiry in days.
+ 
+-**Request**: `Content-Type: application/json`, body required.
++**Request** (`application/json`):
+ 
+-| Field | Type | Description |
+-|-------|------|-------------|
+-| url | string (required) | Absolute URL with scheme http or https |
++- `url` (string, required): absolute http or https URL.
++- `expiresInDays` (integer, optional, nullable): whole-number JSON integer 1 to 3650. Absent or null means the link never expires. Strings, fractions or exponents (`7.0`, `7e0`), zero, negative and out-of-range values are rejected with 400.
++- Unknown properties (e.g. `alias`) are ignored.
+ 
+-**Responses**
++**Responses**:
+ 
+-- `201` Short link created. Header `Location` is the path of the created link's details resource (`/api/links/{code}`). Body: ShortLink (`shortCode`, `longUrl`, `createdAt`).
+-- `400` Invalid request (missing/malformed body or URL that is not absolute http/https). No short link is created.
+-- `415` Request Content-Type is not application/json.
+-- `500` Unexpected server error.
++- `201` Short link created. `Location` header is `/api/links/{code}`. Body: `shortCode`, `longUrl`, `createdAt`. Same with or without expiry.
++- `400` Invalid or malformed body, invalid URL, or invalid `expiresInDays` (the detail describes the expiry problem). Nothing is persisted.
++- `415` Content type is not `application/json`.
++- `500` Unexpected error.
+ 
+-**Example**
++**Example**:
+ 
+ ```
+-curl -i -X POST http://localhost:8080/api/links \
+-  -H 'Content-Type: application/json' \
+-  -d '{"url":"https://example.com/some/long/path"}'
++curl -i -X POST http://localhost:$PORT/api/links -H 'Content-Type: application/json' -d '{"url":"https://example.com/page","expiresInDays":7}'
+ ```
+ 
+ ## GET /api/links/{code}
+ 
+-Get a short link's details.
++Get link details. Returns 200 even if the link has expired.
+ 
+-**Request**: path parameter `code` (string, required) - the service-generated short code.
++**Request**: path parameter `code` (7-character base62 short code).
+ 
+-**Responses**
++**Responses**:
+ 
+-- `200` Body: ShortLink with `shortCode`, `longUrl` (uri) and `createdAt` (date-time).
+-- `404` No short link exists for the given short code.
+-- `500` Unexpected server error.
++- `200` Body: `shortCode`, `longUrl`, `createdAt` (date-time).
++- `404` Unknown short code.
++- `500` Unexpected error.
+ 
+-**Example**
++**Example**:
+ 
+ ```
+-curl -i http://localhost:8080/api/links/aB3xK9q
++curl -i http://localhost:$PORT/api/links/abc1234
+ ```
+ 
+ ## GET /api/links/{code}/analytics
+ 
+-Get a short link's click analytics.
++Get click analytics. Returns 200 even if the link has expired.
+ 
+-**Request**: path parameter `code` (string, required).
++**Request**: path parameter `code`.
+ 
+-**Responses**
++**Responses**:
+ 
+-- `200` Body: `shortCode` (string), `clickCount` (int64, minimum 0), `lastClickedAt` (date-time, nullable; null if never clicked).
+-- `404` No short link exists for the given short code.
+-- `500` Unexpected server error.
++- `200` Body: `shortCode`, `clickCount` (int64), `lastClickedAt` (date-time, null if never clicked).
++- `404` Unknown short code.
++- `500` Unexpected error.
+ 
+-**Example**
++**Example**:
+ 
+ ```
+-curl -i http://localhost:8080/api/links/aB3xK9q/analytics
++curl -i http://localhost:$PORT/api/links/abc1234/analytics
+ ```
+ 
+ ## GET /{code}
+ 
+-Redirect to the original URL and count the click.
++Redirect to the long URL and count the click. Returns 410 if the link has expired (click not counted).
+ 
+-**Request**: path parameter `code` (string, required).
++**Request**: path parameter `code`.
+ 
+-**Responses**
++**Responses**:
+ 
+-- `302` Temporary redirect. Header `Location` is the original long URL; header `Cache-Control: no-store`. The click is counted.
+-- `404` No short link exists for the given short code.
+-- `500` Unexpected server error.
++- `302` Redirect. `Location` is the long URL; `Cache-Control: no-store`. `clickCount` increases by one and `lastClickedAt` is updated.
++- `404` Unknown short code (unknown codes never return 410).
++- `410` The link exists but has expired. Problem body with title `Gone`, status 410 and a generic detail such as `short link has expired`; `Cache-Control: no-store`; no `Location` header. `clickCount` and `lastClickedAt` are unchanged.
++- `500` Unexpected error.
+ 
+-**Example**
++**Example**:
+ 
+ ```
+-curl -i http://localhost:8080/aB3xK9q
++curl -i http://localhost:$PORT/abc1234
+ ```
+diff --git a/src/main/java/com/example/shortener/api/CreateLinkRequest.java b/src/main/java/com/example/shortener/api/CreateLinkRequest.java
+index 00daf89..fcd925b 100644
+--- a/src/main/java/com/example/shortener/api/CreateLinkRequest.java
++++ b/src/main/java/com/example/shortener/api/CreateLinkRequest.java
+@@ -1,4 +1,6 @@
+ package com.example.shortener.api;
+ 
+-public record CreateLinkRequest(String url) {
++import com.fasterxml.jackson.databind.JsonNode;
++
++public record CreateLinkRequest(String url, JsonNode expiresInDays) {
+ }
+diff --git a/src/main/java/com/example/shortener/api/LinkController.java b/src/main/java/com/example/shortener/api/LinkController.java
+index 624c329..139fff7 100644
+--- a/src/main/java/com/example/shortener/api/LinkController.java
++++ b/src/main/java/com/example/shortener/api/LinkController.java
+@@ -23,7 +23,7 @@ public class LinkController {
+ 
+     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+     public ResponseEntity<ShortLinkResponse> create(@RequestBody CreateLinkRequest request) {
+-        ShortLinkRecord r = service.create(request.url());
++        ShortLinkRecord r = service.create(request.url(), request.expiresInDays());
+         return ResponseEntity.status(201)
+                 .header("Location", "/api/links/" + r.shortCode())
+                 .contentType(MediaType.APPLICATION_JSON)
+diff --git a/src/main/java/com/example/shortener/api/ProblemExceptionHandler.java b/src/main/java/com/example/shortener/api/ProblemExceptionHandler.java
+index 8df5143..b75901c 100644
+--- a/src/main/java/com/example/shortener/api/ProblemExceptionHandler.java
++++ b/src/main/java/com/example/shortener/api/ProblemExceptionHandler.java
+@@ -1,6 +1,8 @@
+ package com.example.shortener.api;
+ 
++import com.example.shortener.service.InvalidExpiryException;
+ import com.example.shortener.service.InvalidUrlException;
++import com.example.shortener.service.LinkExpiredException;
+ import com.example.shortener.service.LinkNotFoundException;
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+@@ -25,6 +27,22 @@ public class ProblemExceptionHandler {
+         return build(HttpStatus.BAD_REQUEST, "url must be an absolute http or https URL");
+     }
+ 
++    @ExceptionHandler(InvalidExpiryException.class)
++    public ResponseEntity<ProblemDetail> invalidExpiry(InvalidExpiryException e) {
++        return build(HttpStatus.BAD_REQUEST,
++                "expiresInDays must be a whole-number JSON integer from 1 to 3650");
++    }
++
++    @ExceptionHandler(LinkExpiredException.class)
++    public ResponseEntity<ProblemDetail> expired(LinkExpiredException e) {
++        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, "short link has expired");
++        pd.setTitle(HttpStatus.GONE.getReasonPhrase());
++        return ResponseEntity.status(HttpStatus.GONE)
++                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
++                .header("Cache-Control", "no-store")
++                .body(pd);
++    }
++
+     @ExceptionHandler(HttpMessageNotReadableException.class)
+     public ResponseEntity<ProblemDetail> unreadable(HttpMessageNotReadableException e) {
+         return build(HttpStatus.BAD_REQUEST, "request body is missing or malformed");
+diff --git a/src/main/java/com/example/shortener/config/ClockConfig.java b/src/main/java/com/example/shortener/config/ClockConfig.java
+new file mode 100644
+index 0000000..cc21b78
+--- /dev/null
++++ b/src/main/java/com/example/shortener/config/ClockConfig.java
+@@ -0,0 +1,15 @@
++package com.example.shortener.config;
++
++import java.time.Clock;
++
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class ClockConfig {
++
++    @Bean
++    public Clock clock() {
++        return Clock.systemUTC();
++    }
++}
+diff --git a/src/main/java/com/example/shortener/persistence/SchemaMigrator.java b/src/main/java/com/example/shortener/persistence/SchemaMigrator.java
+new file mode 100644
+index 0000000..6a8e5d3
+--- /dev/null
++++ b/src/main/java/com/example/shortener/persistence/SchemaMigrator.java
+@@ -0,0 +1,36 @@
++package com.example.shortener.persistence;
++
++import java.util.List;
++
++import org.springframework.beans.factory.InitializingBean;
++import org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration;
++import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
++import org.springframework.jdbc.core.JdbcTemplate;
++import org.springframework.stereotype.Component;
++
++/**
++ * Idempotent startup migration adding the nullable expires_at column to databases
++ * created before expiry support existed.
++ */
++@Component
++@DependsOnDatabaseInitialization
++public class SchemaMigrator implements InitializingBean {
++
++    private final JdbcTemplate jdbc;
++
++    public SchemaMigrator(JdbcTemplate jdbc) {
++        this.jdbc = jdbc;
++    }
++
++    @Override
++    public void afterPropertiesSet() {
++        migrate();
++    }
++
++    public void migrate() {
++        List<String> columns = jdbc.query("PRAGMA table_info(short_links)", (rs, i) -> rs.getString("name"));
++        if (!columns.isEmpty() && !columns.contains("expires_at")) {
++            jdbc.execute("ALTER TABLE short_links ADD COLUMN expires_at TEXT");
++        }
++    }
++}
+diff --git a/src/main/java/com/example/shortener/persistence/ShortLinkRecord.java b/src/main/java/com/example/shortener/persistence/ShortLinkRecord.java
+index 8ef8bf0..7e6ed61 100644
+--- a/src/main/java/com/example/shortener/persistence/ShortLinkRecord.java
++++ b/src/main/java/com/example/shortener/persistence/ShortLinkRecord.java
+@@ -2,5 +2,5 @@ package com.example.shortener.persistence;
+ 
+ import java.time.Instant;
+ 
+-public record ShortLinkRecord(String shortCode, String longUrl, Instant createdAt, long clickCount, Instant lastClickedAt) {
++public record ShortLinkRecord(String shortCode, String longUrl, Instant createdAt, long clickCount, Instant lastClickedAt, Instant expiresAt) {
+ }
+diff --git a/src/main/java/com/example/shortener/persistence/ShortLinkRepository.java b/src/main/java/com/example/shortener/persistence/ShortLinkRepository.java
+index b75730d..2c834e8 100644
+--- a/src/main/java/com/example/shortener/persistence/ShortLinkRepository.java
++++ b/src/main/java/com/example/shortener/persistence/ShortLinkRepository.java
+@@ -23,17 +23,19 @@ public class ShortLinkRepository {
+ 
+     private static final RowMapper<ShortLinkRecord> MAPPER = (rs, i) -> {
+         String last = rs.getString("last_clicked_at");
++        String exp = rs.getString("expires_at");
+         return new ShortLinkRecord(
+                 rs.getString("short_code"),
+                 rs.getString("long_url"),
+                 Instant.parse(rs.getString("created_at")),
+                 rs.getLong("click_count"),
+-                last == null ? null : Instant.parse(last));
++                last == null ? null : Instant.parse(last),
++                exp == null ? null : Instant.parse(exp));
+     };
+ 
+     private final JdbcTemplate jdbc;
+ 
+-    public ShortLinkRepository(JdbcTemplate jdbc) {
++    public ShortLinkRepository(JdbcTemplate jdbc, SchemaMigrator schemaMigrator) {
+         this.jdbc = jdbc;
+     }
+ 
+@@ -41,12 +43,17 @@ public class ShortLinkRepository {
+         return FORMAT.format(instant.truncatedTo(ChronoUnit.MICROS));
+     }
+ 
+-    /** Inserts a new row; throws DuplicateKeyException on short_code collision. */
++    /** Inserts a new row without expiry; throws DuplicateKeyException on collision. */
+     public void insert(String shortCode, String longUrl, Instant createdAt) {
++        insert(shortCode, longUrl, createdAt, null);
++    }
++
++    /** Inserts a new row; throws DuplicateKeyException on short_code collision. */
++    public void insert(String shortCode, String longUrl, Instant createdAt, Instant expiresAt) {
+         try {
+             jdbc.update(
+-                    "INSERT INTO short_links (short_code, long_url, created_at, click_count, last_clicked_at) VALUES (?, ?, ?, 0, NULL)",
+-                    shortCode, longUrl, format(createdAt));
++                    "INSERT INTO short_links (short_code, long_url, created_at, click_count, last_clicked_at, expires_at) VALUES (?, ?, ?, 0, NULL, ?)",
++                    shortCode, longUrl, format(createdAt), expiresAt == null ? null : format(expiresAt));
+         } catch (UncategorizedSQLException e) {
+             SQLException cause = e.getSQLException();
+             if (cause != null && cause.getErrorCode() == SQLITE_CONSTRAINT
+@@ -59,7 +66,7 @@ public class ShortLinkRepository {
+ 
+     public Optional<ShortLinkRecord> findByCode(String shortCode) {
+         List<ShortLinkRecord> rows = jdbc.query(
+-                "SELECT short_code, long_url, created_at, click_count, last_clicked_at FROM short_links WHERE short_code = ?",
++                "SELECT short_code, long_url, created_at, click_count, last_clicked_at, expires_at FROM short_links WHERE short_code = ?",
+                 MAPPER, shortCode);
+         return rows.stream().findFirst();
+     }
+@@ -70,6 +77,18 @@ public class ShortLinkRepository {
+                 format(now), shortCode);
+     }
+ 
++    public int incrementClickIfNotExpired(String shortCode, Instant now) {
++        String n = format(now);
++        return jdbc.update(
++                "UPDATE short_links SET click_count = click_count + 1, last_clicked_at = ? WHERE short_code = ? AND (expires_at IS NULL OR expires_at > ?)",
++                n, shortCode, n);
++    }
++
++    public boolean existsByCode(String shortCode) {
++        Integer c = jdbc.queryForObject("SELECT COUNT(*) FROM short_links WHERE short_code = ?", Integer.class, shortCode);
++        return c != null && c > 0;
++    }
++
+     public Optional<String> findLongUrl(String shortCode) {
+         List<String> rows = jdbc.queryForList(
+                 "SELECT long_url FROM short_links WHERE short_code = ?", String.class, shortCode);
+diff --git a/src/main/java/com/example/shortener/service/ExpiryPolicy.java b/src/main/java/com/example/shortener/service/ExpiryPolicy.java
+new file mode 100644
+index 0000000..47a0c36
+--- /dev/null
++++ b/src/main/java/com/example/shortener/service/ExpiryPolicy.java
+@@ -0,0 +1,35 @@
++package com.example.shortener.service;
++
++import java.math.BigInteger;
++import java.time.Duration;
++import java.time.Instant;
++import java.util.Optional;
++
++import org.springframework.stereotype.Component;
++
++import com.fasterxml.jackson.databind.JsonNode;
++
++@Component
++public class ExpiryPolicy {
++
++    private static final BigInteger MIN = BigInteger.ONE;
++    private static final BigInteger MAX = BigInteger.valueOf(3650);
++
++    public Optional<Integer> validate(JsonNode node) {
++        if (node == null || node.isNull() || node.isMissingNode()) {
++            return Optional.empty();
++        }
++        if (!node.isIntegralNumber()) {
++            throw new InvalidExpiryException();
++        }
++        BigInteger value = node.bigIntegerValue();
++        if (value.compareTo(MIN) < 0 || value.compareTo(MAX) > 0) {
++            throw new InvalidExpiryException();
++        }
++        return Optional.of(value.intValueExact());
++    }
++
++    public Instant computeExpiresAt(Instant createdAt, int days) {
++        return createdAt.plus(Duration.ofHours(24L * days));
++    }
++}
+diff --git a/src/main/java/com/example/shortener/service/InvalidExpiryException.java b/src/main/java/com/example/shortener/service/InvalidExpiryException.java
+new file mode 100644
+index 0000000..3bc01a1
+--- /dev/null
++++ b/src/main/java/com/example/shortener/service/InvalidExpiryException.java
+@@ -0,0 +1,10 @@
++package com.example.shortener.service;
++
++public class InvalidExpiryException extends RuntimeException {
++
++    public static final String MESSAGE = "expiresInDays must be a whole-number JSON integer from 1 to 3650";
++
++    public InvalidExpiryException() {
++        super(MESSAGE);
++    }
++}
+diff --git a/src/main/java/com/example/shortener/service/LinkExpiredException.java b/src/main/java/com/example/shortener/service/LinkExpiredException.java
+new file mode 100644
+index 0000000..68830b0
+--- /dev/null
++++ b/src/main/java/com/example/shortener/service/LinkExpiredException.java
+@@ -0,0 +1,8 @@
++package com.example.shortener.service;
++
++public class LinkExpiredException extends RuntimeException {
++
++    public LinkExpiredException() {
++        super("short link has expired");
++    }
++}
+diff --git a/src/main/java/com/example/shortener/service/LinkService.java b/src/main/java/com/example/shortener/service/LinkService.java
+index 55d4c32..3ee2982 100644
+--- a/src/main/java/com/example/shortener/service/LinkService.java
++++ b/src/main/java/com/example/shortener/service/LinkService.java
+@@ -2,7 +2,10 @@ package com.example.shortener.service;
+ 
+ import com.example.shortener.persistence.ShortLinkRecord;
+ import com.example.shortener.persistence.ShortLinkRepository;
++import com.fasterxml.jackson.databind.JsonNode;
++import java.time.Clock;
+ import java.time.Instant;
++import java.util.Optional;
+ import org.springframework.dao.DuplicateKeyException;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+@@ -15,20 +18,31 @@ public class LinkService {
+     private final ShortLinkRepository repository;
+     private final UrlValidator validator;
+     private final ShortCodeGenerator generator;
++    private final ExpiryPolicy expiryPolicy;
++    private final Clock clock;
+ 
+-    public LinkService(ShortLinkRepository repository, UrlValidator validator, ShortCodeGenerator generator) {
++    public LinkService(ShortLinkRepository repository, UrlValidator validator, ShortCodeGenerator generator,
++            ExpiryPolicy expiryPolicy, Clock clock) {
+         this.repository = repository;
+         this.validator = validator;
+         this.generator = generator;
++        this.expiryPolicy = expiryPolicy;
++        this.clock = clock;
+     }
+ 
+     public ShortLinkRecord create(String url) {
++        return create(url, null);
++    }
++
++    public ShortLinkRecord create(String url, JsonNode expiresInDays) {
+         validator.validate(url);
+-        Instant createdAt = Instant.now();
++        Optional<Integer> days = expiryPolicy.validate(expiresInDays);
++        Instant createdAt = clock.instant();
++        Instant expiresAt = days.map(d -> expiryPolicy.computeExpiresAt(createdAt, d)).orElse(null);
+         for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+             String code = generator.generate();
+             try {
+-                repository.insert(code, url, createdAt);
++                repository.insert(code, url, createdAt, expiresAt);
+             } catch (DuplicateKeyException e) {
+                 continue;
+             }
+@@ -47,8 +61,12 @@ public class LinkService {
+ 
+     @Transactional
+     public String resolveAndCount(String code) {
+-        int updated = repository.incrementClick(code, Instant.now());
++        Instant now = clock.instant();
++        int updated = repository.incrementClickIfNotExpired(code, now);
+         if (updated == 0) {
++            if (repository.existsByCode(code)) {
++                throw new LinkExpiredException();
++            }
+             throw new LinkNotFoundException(code);
+         }
+         return repository.findLongUrl(code).orElseThrow(() -> new LinkNotFoundException(code));
+diff --git a/src/main/resources/schema.sql b/src/main/resources/schema.sql
+index ca65c16..d79cf89 100644
+--- a/src/main/resources/schema.sql
++++ b/src/main/resources/schema.sql
+@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS short_links (
+   long_url TEXT NOT NULL,
+   created_at TEXT NOT NULL,
+   click_count INTEGER NOT NULL DEFAULT 0 CHECK (click_count >= 0),
+-  last_clicked_at TEXT
++  last_clicked_at TEXT,
++  expires_at TEXT
+ );
+ CREATE UNIQUE INDEX IF NOT EXISTS ux_short_links_short_code ON short_links (short_code);
+diff --git a/src/test/java/com/example/shortener/ShortenerApplicationTests.java b/src/test/java/com/example/shortener/ShortenerApplicationTests.java
+index 8d83eb7..2079ab3 100644
+--- a/src/test/java/com/example/shortener/ShortenerApplicationTests.java
++++ b/src/test/java/com/example/shortener/ShortenerApplicationTests.java
+@@ -39,4 +39,11 @@ class ShortenerApplicationTests {
+         Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM short_links", Integer.class);
+         assertEquals(0, n);
+     }
++
++    @Test
++    void expiresAtColumnExists() {
++        Integer n = jdbc.queryForObject(
++                "SELECT COUNT(*) FROM short_links WHERE expires_at IS NOT NULL", Integer.class);
++        assertEquals(0, n);
++    }
+ }
+diff --git a/src/test/java/com/example/shortener/api/LinkApiTest.java b/src/test/java/com/example/shortener/api/LinkApiTest.java
+index 72fdc30..2788bac 100644
+--- a/src/test/java/com/example/shortener/api/LinkApiTest.java
++++ b/src/test/java/com/example/shortener/api/LinkApiTest.java
+@@ -1,6 +1,8 @@
+ package com.example.shortener.api;
+ 
++import static org.hamcrest.Matchers.hasSize;
+ import static org.hamcrest.Matchers.nullValue;
++import static org.junit.jupiter.api.Assertions.assertEquals;
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+@@ -12,10 +14,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
+ import java.io.IOException;
+ import java.nio.file.Files;
+ import java.nio.file.Path;
++import java.time.Clock;
++import java.time.Duration;
++import java.time.Instant;
++import java.time.ZoneId;
++import java.time.ZoneOffset;
++import java.util.List;
++import java.util.concurrent.atomic.AtomicReference;
++import org.junit.jupiter.api.BeforeEach;
+ import org.junit.jupiter.api.Test;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+ import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.test.context.TestConfiguration;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Primary;
+ import org.springframework.http.MediaType;
+ import org.springframework.test.context.DynamicPropertyRegistry;
+ import org.springframework.test.context.DynamicPropertySource;
+@@ -26,6 +39,7 @@ import org.springframework.test.web.servlet.MockMvc;
+ class LinkApiTest {
+ 
+     private static final Path DB;
++    private static final Instant START = Instant.parse("2030-01-01T00:00:00Z");
+ 
+     static {
+         try {
+@@ -36,6 +50,38 @@ class LinkApiTest {
+         }
+     }
+ 
++    static class MutableClock extends Clock {
++        private final AtomicReference<Instant> now = new AtomicReference<>(START);
++
++        void set(Instant i) {
++            now.set(i);
++        }
++
++        @Override
++        public ZoneId getZone() {
++            return ZoneOffset.UTC;
++        }
++
++        @Override
++        public Clock withZone(ZoneId zone) {
++            return this;
++        }
++
++        @Override
++        public Instant instant() {
++            return now.get();
++        }
++    }
++
++    @TestConfiguration
++    static class TestClockConfig {
++        @Bean
++        @Primary
++        MutableClock testClock() {
++            return new MutableClock();
++        }
++    }
++
+     @DynamicPropertySource
+     static void props(DynamicPropertyRegistry registry) {
+         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
+@@ -47,6 +93,14 @@ class LinkApiTest {
+     @Autowired
+     ObjectMapper mapper;
+ 
++    @Autowired
++    MutableClock clock;
++
++    @BeforeEach
++    void resetClock() {
++        clock.set(START);
++    }
++
+     private String create(String url) throws Exception {
+         String body = mvc.perform(post("/api/links").contentType(MediaType.APPLICATION_JSON)
+                         .content("{\"url\":\"" + url + "\",\"alias\":\"mine\"}"))
+@@ -57,6 +111,15 @@ class LinkApiTest {
+         return n.get("shortCode").asText();
+     }
+ 
++    private String createWithExpiry(String url, String expiryLiteral) throws Exception {
++        String body = mvc.perform(post("/api/links").contentType(MediaType.APPLICATION_JSON)
++                        .content("{\"url\":\"" + url + "\",\"expiresInDays\":" + expiryLiteral + "}"))
++                .andExpect(status().isCreated())
++                .andExpect(jsonPath("$.*", hasSize(3)))
++                .andReturn().getResponse().getContentAsString();
++        return mapper.readTree(body).get("shortCode").asText();
++    }
++
+     @Test
+     void createAndDetails() throws Exception {
+         String code = create("https://example.com/a");
+@@ -72,12 +135,13 @@ class LinkApiTest {
+         String body = mvc.perform(post("/api/links").contentType(MediaType.APPLICATION_JSON)
+                         .content("{\"url\":\"http://example.com\"}"))
+                 .andExpect(status().isCreated())
++                .andExpect(jsonPath("$.*", hasSize(3)))
+                 .andReturn().getResponse().getContentAsString();
+         String code = mapper.readTree(body).get("shortCode").asText();
+         mvc.perform(post("/api/links").contentType(MediaType.APPLICATION_JSON)
+                         .content("{\"url\":\"http://example.com\"}"))
+                 .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith("/api/links/")));
+-        org.junit.jupiter.api.Assertions.assertEquals(7, code.length());
++        assertEquals(7, code.length());
+     }
+ 
+     @Test
+@@ -133,4 +197,65 @@ class LinkApiTest {
+         mvc.perform(get("/api/links/nope123")).andExpect(status().isNotFound());
+         mvc.perform(get("/api/links/nope123/analytics")).andExpect(status().isNotFound());
+     }
++
++    @Test
++    void invalidExpiryVariantsAre400() throws Exception {
++        List<String> bad = List.of("0", "-1", "3651", "99999999999999999999", "1.5", "7.0", "7e0",
++                "\"7\"", "true", "{}", "[]", "[7]");
++        for (String literal : bad) {
++            mvc.perform(post("/api/links").contentType(MediaType.APPLICATION_JSON)
++                            .content("{\"url\":\"https://example.com\",\"expiresInDays\":" + literal + "}"))
++                    .andExpect(status().isBadRequest())
++                    .andExpect(header().string("Content-Type", "application/problem+json"))
++                    .andExpect(jsonPath("$.status").value(400))
++                    .andExpect(jsonPath("$.detail").value(
++                            "expiresInDays must be a whole-number JSON integer from 1 to 3650"));
++        }
++    }
++
++    @Test
++    void validBoundsAndNullAccepted() throws Exception {
++        createWithExpiry("https://example.com/min", "1");
++        createWithExpiry("https://example.com/max", "3650");
++        createWithExpiry("https://example.com/null", "null");
++    }
++
++    @Test
++    void expiredLinkReturns410AndIsNotCounted() throws Exception {
++        String code = createWithExpiry("https://example.com/exp", "1");
++        Instant expiry = START.plus(Duration.ofHours(24));
++
++        clock.set(expiry.minusSeconds(1));
++        mvc.perform(get("/" + code))
++                .andExpect(status().isFound())
++                .andExpect(header().string("Location", "https://example.com/exp"));
++
++        clock.set(expiry);
++        mvc.perform(get("/" + code))
++                .andExpect(status().isGone())
++                .andExpect(header().doesNotExist("Location"))
++                .andExpect(header().string("Cache-Control", "no-store"))
++                .andExpect(header().string("Content-Type", "application/problem+json"))
++                .andExpect(jsonPath("$.title").value("Gone"))
++                .andExpect(jsonPath("$.detail").value("short link has expired"));
++
++        clock.set(expiry.plusSeconds(3600));
++        mvc.perform(get("/" + code)).andExpect(status().isGone());
++
++        mvc.perform(get("/api/links/" + code + "/analytics"))
++                .andExpect(status().isOk())
++                .andExpect(jsonPath("$.*", hasSize(3)))
++                .andExpect(jsonPath("$.clickCount").value(1));
++        mvc.perform(get("/api/links/" + code))
++                .andExpect(status().isOk())
++                .andExpect(jsonPath("$.*", hasSize(3)))
++                .andExpect(jsonPath("$.shortCode").value(code));
++    }
++
++    @Test
++    void linkWithoutExpiryNeverExpires() throws Exception {
++        String code = create("https://example.com/forever");
++        clock.set(START.plus(Duration.ofDays(5000)));
++        mvc.perform(get("/" + code)).andExpect(status().isFound());
++    }
+ }
+diff --git a/src/test/java/com/example/shortener/persistence/SchemaMigratorTest.java b/src/test/java/com/example/shortener/persistence/SchemaMigratorTest.java
+new file mode 100644
+index 0000000..ac2ab65
+--- /dev/null
++++ b/src/test/java/com/example/shortener/persistence/SchemaMigratorTest.java
+@@ -0,0 +1,57 @@
++package com.example.shortener.persistence;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertNull;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import java.nio.file.Path;
++import java.util.List;
++
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.io.TempDir;
++import org.springframework.jdbc.core.JdbcTemplate;
++import org.springframework.jdbc.datasource.DriverManagerDataSource;
++
++class SchemaMigratorTest {
++
++    @TempDir
++    Path dir;
++
++    private JdbcTemplate template() {
++        DriverManagerDataSource ds = new DriverManagerDataSource(
++                "jdbc:sqlite:" + dir.resolve("t.db").toAbsolutePath());
++        ds.setDriverClassName("org.sqlite.JDBC");
++        return new JdbcTemplate(ds);
++    }
++
++    private List<String> columns(JdbcTemplate jdbc) {
++        return jdbc.query("PRAGMA table_info(short_links)", (rs, i) -> rs.getString("name"));
++    }
++
++    @Test
++    void legacyTableGetsColumnAndRepeatIsNoop() {
++        JdbcTemplate jdbc = template();
++        jdbc.execute("CREATE TABLE short_links (id INTEGER PRIMARY KEY AUTOINCREMENT, short_code TEXT NOT NULL UNIQUE,"
++                + " long_url TEXT NOT NULL, created_at TEXT NOT NULL, click_count INTEGER NOT NULL DEFAULT 0,"
++                + " last_clicked_at TEXT)");
++        jdbc.update("INSERT INTO short_links (short_code, long_url, created_at) VALUES ('abc', 'http://x', 't')");
++        SchemaMigrator migrator = new SchemaMigrator(jdbc);
++        migrator.migrate();
++        migrator.migrate();
++        assertTrue(columns(jdbc).contains("expires_at"));
++        assertEquals(1, columns(jdbc).stream().filter("expires_at"::equals).count());
++        assertNull(jdbc.queryForObject("SELECT expires_at FROM short_links WHERE short_code='abc'", String.class));
++    }
++
++    @Test
++    void freshTableWithColumnIsSkipped() {
++        JdbcTemplate jdbc = template();
++        jdbc.execute("CREATE TABLE short_links (short_code TEXT PRIMARY KEY, long_url TEXT NOT NULL,"
++                + " created_at TEXT NOT NULL, click_count INTEGER NOT NULL DEFAULT 0, last_clicked_at TEXT,"
++                + " expires_at TEXT)");
++        SchemaMigrator migrator = new SchemaMigrator(jdbc);
++        migrator.migrate();
++        migrator.migrate();
++        assertTrue(columns(jdbc).contains("expires_at"));
++    }
++}
+diff --git a/src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java b/src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java
+index 2b4c1f3..7ddb733 100644
+--- a/src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java
++++ b/src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java
+@@ -1,6 +1,7 @@
+ package com.example.shortener.persistence;
+ 
+ import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertFalse;
+ import static org.junit.jupiter.api.Assertions.assertNull;
+ import static org.junit.jupiter.api.Assertions.assertThrows;
+ import static org.junit.jupiter.api.Assertions.assertTrue;
+@@ -58,6 +59,15 @@ class ShortLinkRepositoryTest {
+         assertEquals(t, r.createdAt());
+         assertEquals(0, r.clickCount());
+         assertNull(r.lastClickedAt());
++        assertNull(r.expiresAt());
++    }
++
++    @Test
++    void insertWithExpiry() {
++        Instant t = Instant.now().truncatedTo(ChronoUnit.MICROS);
++        Instant e = t.plus(24, ChronoUnit.HOURS);
++        repo.insert("exp1234", "https://example.com/x", t, e);
++        assertEquals(e, repo.findByCode("exp1234").orElseThrow().expiresAt());
+     }
+ 
+     @Test
+@@ -72,6 +82,8 @@ class ShortLinkRepositoryTest {
+         assertTrue(repo.findByCode("nope").isEmpty());
+         assertTrue(repo.findLongUrl("nope").isEmpty());
+         assertEquals(0, repo.incrementClick("nope", Instant.now()));
++        assertEquals(0, repo.incrementClickIfNotExpired("nope", Instant.now()));
++        assertFalse(repo.existsByCode("nope"));
+     }
+ 
+     @Test
+@@ -85,4 +97,25 @@ class ShortLinkRepositoryTest {
+         assertEquals(now, r.lastClickedAt());
+         assertEquals("https://example.com", repo.findLongUrl("clk1234").orElseThrow());
+     }
++
++    @Test
++    void conditionalIncrementRespectsExpiry() {
++        Instant t = Instant.parse("2030-01-01T00:00:00Z");
++        Instant e = t.plus(24, ChronoUnit.HOURS);
++        repo.insert("cnd1234", "https://example.com", t, e);
++        assertTrue(repo.existsByCode("cnd1234"));
++        assertEquals(1, repo.incrementClickIfNotExpired("cnd1234", e.minusSeconds(1)));
++        assertEquals(0, repo.incrementClickIfNotExpired("cnd1234", e));
++        assertEquals(0, repo.incrementClickIfNotExpired("cnd1234", e.plusSeconds(5)));
++        ShortLinkRecord r = repo.findByCode("cnd1234").orElseThrow();
++        assertEquals(1, r.clickCount());
++        assertEquals(e.minusSeconds(1), r.lastClickedAt());
++    }
++
++    @Test
++    void conditionalIncrementWithoutExpiryAlwaysCounts() {
++        repo.insert("nev1234", "https://example.com", Instant.parse("2030-01-01T00:00:00Z"));
++        assertEquals(1, repo.incrementClickIfNotExpired("nev1234", Instant.parse("2099-01-01T00:00:00Z")));
++        assertEquals(1, repo.findByCode("nev1234").orElseThrow().clickCount());
++    }
+ }
+diff --git a/src/test/java/com/example/shortener/service/ExpiryPolicyTest.java b/src/test/java/com/example/shortener/service/ExpiryPolicyTest.java
+new file mode 100644
+index 0000000..975823c
+--- /dev/null
++++ b/src/test/java/com/example/shortener/service/ExpiryPolicyTest.java
+@@ -0,0 +1,55 @@
++package com.example.shortener.service;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertThrows;
++import static org.junit.jupiter.api.Assertions.assertTrue;
++
++import java.time.Instant;
++
++import org.junit.jupiter.api.Test;
++
++import com.fasterxml.jackson.databind.JsonNode;
++import com.fasterxml.jackson.databind.ObjectMapper;
++
++class ExpiryPolicyTest {
++
++    private final ExpiryPolicy policy = new ExpiryPolicy();
++    private final ObjectMapper mapper = new ObjectMapper();
++
++    private JsonNode parse(String json) throws Exception {
++        return mapper.readTree(json);
++    }
++
++    private void invalid(String json) throws Exception {
++        JsonNode n = parse(json);
++        assertThrows(InvalidExpiryException.class, () -> policy.validate(n), json);
++    }
++
++    @Test
++    void nullAndAbsentMeanNoExpiry() throws Exception {
++        assertTrue(policy.validate(null).isEmpty());
++        assertTrue(policy.validate(parse("null")).isEmpty());
++    }
++
++    @Test
++    void validIntegers() throws Exception {
++        assertEquals(1, policy.validate(parse("1")).get());
++        assertEquals(7, policy.validate(parse("7")).get());
++        assertEquals(3650, policy.validate(parse("3650")).get());
++    }
++
++    @Test
++    void invalidValues() throws Exception {
++        for (String s : new String[] {"0", "-1", "3651", "99999999999999999999", "-99999999999999999999", "1.5",
++                "7.0", "7e0", "\"7\"", "true", "{}", "[]", "[7]"}) {
++            invalid(s);
++        }
++    }
++
++    @Test
++    void computesExpiryAs24HourMultiples() {
++        Instant created = Instant.parse("2024-01-01T00:00:00Z");
++        assertEquals(Instant.parse("2024-01-08T00:00:00Z"), policy.computeExpiresAt(created, 7));
++        assertEquals(created.plusSeconds(86400L * 3650), policy.computeExpiresAt(created, 3650));
++    }
++}
+diff --git a/src/test/java/com/example/shortener/service/LinkServiceTest.java b/src/test/java/com/example/shortener/service/LinkServiceTest.java
+index 309edd5..a338407 100644
+--- a/src/test/java/com/example/shortener/service/LinkServiceTest.java
++++ b/src/test/java/com/example/shortener/service/LinkServiceTest.java
+@@ -7,13 +7,24 @@ import static org.junit.jupiter.api.Assertions.assertNull;
+ import static org.junit.jupiter.api.Assertions.assertThrows;
+ 
+ import com.example.shortener.persistence.ShortLinkRecord;
++import com.fasterxml.jackson.databind.node.IntNode;
++import com.fasterxml.jackson.databind.node.NullNode;
++import com.fasterxml.jackson.databind.node.TextNode;
+ import java.io.IOException;
+ import java.nio.file.Files;
+ import java.nio.file.Path;
++import java.time.Clock;
++import java.time.Instant;
++import java.time.ZoneId;
++import java.time.ZoneOffset;
++import java.util.concurrent.atomic.AtomicReference;
+ import org.junit.jupiter.api.BeforeEach;
+ import org.junit.jupiter.api.Test;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.test.context.TestConfiguration;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Primary;
+ import org.springframework.jdbc.core.JdbcTemplate;
+ import org.springframework.test.context.DynamicPropertyRegistry;
+ import org.springframework.test.context.DynamicPropertySource;
+@@ -22,6 +33,7 @@ import org.springframework.test.context.DynamicPropertySource;
+ class LinkServiceTest {
+ 
+     private static final Path DB;
++    private static final Instant START = Instant.parse("2030-01-01T00:00:00Z");
+ 
+     static {
+         try {
+@@ -32,6 +44,38 @@ class LinkServiceTest {
+         }
+     }
+ 
++    static class MutableClock extends Clock {
++        private final AtomicReference<Instant> now = new AtomicReference<>(START);
++
++        void set(Instant i) {
++            now.set(i);
++        }
++
++        @Override
++        public ZoneId getZone() {
++            return ZoneOffset.UTC;
++        }
++
++        @Override
++        public Clock withZone(ZoneId zone) {
++            return this;
++        }
++
++        @Override
++        public Instant instant() {
++            return now.get();
++        }
++    }
++
++    @TestConfiguration
++    static class TestClockConfig {
++        @Bean
++        @Primary
++        MutableClock testClock() {
++            return new MutableClock();
++        }
++    }
++
+     @DynamicPropertySource
+     static void props(DynamicPropertyRegistry registry) {
+         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
+@@ -43,19 +87,37 @@ class LinkServiceTest {
+     @Autowired
+     JdbcTemplate jdbc;
+ 
++    @Autowired
++    MutableClock clock;
++
+     @BeforeEach
+     void clean() {
+         jdbc.update("DELETE FROM short_links");
++        clock.set(START);
+     }
+ 
+     @Test
+     void createsIndependentLinks() {
+         ShortLinkRecord a = service.create("https://example.com/a");
+-        ShortLinkRecord b = service.create("https://example.com/a");
++        ShortLinkRecord b = service.create("https://example.com/a", null);
+         assertNotEquals(a.shortCode(), b.shortCode());
+         assertEquals("https://example.com/a", a.longUrl());
+         assertNotNull(a.createdAt());
+         assertEquals(0, a.clickCount());
++        assertNull(a.expiresAt());
++    }
++
++    @Test
++    void nullNodeMeansNoExpiry() {
++        ShortLinkRecord a = service.create("https://example.com/a", NullNode.getInstance());
++        assertNull(a.expiresAt());
++    }
++
++    @Test
++    void expiryComputedFromCreatedAt() {
++        ShortLinkRecord a = service.create("https://example.com/a", IntNode.valueOf(7));
++        assertEquals(START, a.createdAt());
++        assertEquals(Instant.parse("2030-01-08T00:00:00Z"), a.expiresAt());
+     }
+ 
+     @Test
+@@ -64,6 +126,15 @@ class LinkServiceTest {
+         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM short_links", Integer.class));
+     }
+ 
++    @Test
++    void invalidExpiryPersistsNothing() {
++        assertThrows(InvalidExpiryException.class,
++                () -> service.create("https://example.com/a", IntNode.valueOf(0)));
++        assertThrows(InvalidExpiryException.class,
++                () -> service.create("https://example.com/a", TextNode.valueOf("7")));
++        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM short_links", Integer.class));
++    }
++
+     @Test
+     void resolveCountsClicks() {
+         ShortLinkRecord l = service.create("https://example.com/z");
+@@ -75,6 +146,19 @@ class LinkServiceTest {
+         assertNotNull(r.lastClickedAt());
+     }
+ 
++    @Test
++    void expiredLinkThrowsAndIsNotCounted() {
++        ShortLinkRecord l = service.create("https://example.com/e", IntNode.valueOf(1));
++        clock.set(Instant.parse("2030-01-01T23:59:59Z"));
++        assertEquals("https://example.com/e", service.resolveAndCount(l.shortCode()));
++        clock.set(Instant.parse("2030-01-02T00:00:00Z"));
++        assertThrows(LinkExpiredException.class, () -> service.resolveAndCount(l.shortCode()));
++        clock.set(Instant.parse("2030-02-01T00:00:00Z"));
++        assertThrows(LinkExpiredException.class, () -> service.resolveAndCount(l.shortCode()));
++        assertEquals(1, service.getAnalytics(l.shortCode()).clickCount());
++        assertEquals(l.shortCode(), service.getDetails(l.shortCode()).shortCode());
++    }
++
+     @Test
+     void unknownCodeThrows() {
+         assertThrows(LinkNotFoundException.class, () -> service.resolveAndCount("nope"));

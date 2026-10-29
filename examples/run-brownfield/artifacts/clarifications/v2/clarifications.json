@@ -1,0 +1,22 @@
+[
+  {
+    "id": "C-1",
+    "question": "Which expiry values are valid, and what happens with invalid ones (zero, negative, fractional, numeric strings like \"7\", or very large numbers)?",
+    "answer": "Accept only whole-number JSON integers from 1 to 3650 inclusive. Reject zero, negative, fractional, string and out-of-range values with 400 application/problem+json whose detail describes the expiry problem. Persist nothing on rejection."
+  },
+  {
+    "id": "C-2",
+    "question": "Should a GET /{code} that returns 410 for an expired link increase the click count or update the last-click time?",
+    "answer": "No. Only successful 302 redirects are counted. A 410 response leaves clickCount and lastClickedAt unchanged."
+  },
+  {
+    "id": "C-3",
+    "question": "What should GET /api/links/{code} and GET /api/links/{code}/analytics return for an expired link?",
+    "answer": "Keep returning 200 with the current fields. Only the redirect endpoint returns 410."
+  },
+  {
+    "id": "C-4",
+    "question": "Should the link's computed expiry timestamp (e.g. expiresAt) be exposed in the create (POST /api/links) and details (GET /api/links/{code}) responses? If so, how should it appear for links that never expire?",
+    "answer": "Do not add any new response field. Keep create and details responses exactly as today, per C-3's 'current fields'."
+  }
+]

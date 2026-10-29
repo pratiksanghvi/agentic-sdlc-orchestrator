@@ -1,0 +1,13 @@
+{
+  "type": "security_report",
+  "version": 1,
+  "produced_by": "S5",
+  "attempt": 1,
+  "created_at": "2026-10-29T18:10:52.179Z",
+  "inputs": [],
+  "files": {
+    "security_report.json": "sha256:9c35c7438107240f8c08def8bb21ce078eb97e9279eadec7753f633e19d61886",
+    "security_report.md": "sha256:b32831bf5c1b4625957fc41a29eb448acad2df0aa10f2784c16f08a7c435f47d"
+  },
+  "hash": "sha256:c37304f792b3501d79c1c3dc5e98f96d41831823034be12b0f4e101a774cda3d"
+}
