@@ -29,6 +29,23 @@ stacks:
       io.micrometer:micrometer-registry-prometheus: managed
       org.xerial:sqlite-jdbc: "3.50.3.0"
       com.bucket4j:bucket4j_jdk17-core: "8.14.0"
+    guidance: |
+      - Maven project; parent org.springframework.boot:spring-boot-starter-parent 3.5.7;
+        <java.version>21</java.version>; base package com.example.app; no Lombok.
+      - Persistence: spring-boot-starter-jdbc + org.xerial:sqlite-jdbc 3.50.3.0 (JdbcTemplate).
+        spring.datasource.url=jdbc:sqlite:${DB_PATH:app.db},
+        spring.datasource.driver-class-name=org.sqlite.JDBC,
+        spring.datasource.hikari.maximum-pool-size=1, spring.sql.init.mode=always.
+        Put the approved DDL in src/main/resources/schema.sql using CREATE TABLE IF NOT EXISTS.
+      - Startup contract: server.port=${PORT:8080}; a component listening for
+        ApplicationReadyEvent prints exactly "SERVICE_READY port=" + the actual server port
+        (from WebServerApplicationContext / local.server.port) with System.out.println and flushes.
+      - Errors: return RFC 7807 ProblemDetail (application/problem+json); set
+        server.error.include-stacktrace=never and spring.mvc.problemdetails.enabled=true.
+      - Unit tests: JUnit 5 + MockMvc (spring-boot-starter-test) in src/test/java; tests must use
+        a temporary SQLite file (set spring.datasource.url via @DynamicPropertySource or
+        @SpringBootTest(properties=...)) and must pass with `mvn -B verify`.
+      - Packaging: spring-boot-maven-plugin so `mvn verify` produces one executable jar in target/.
 
   python312-fastapi:
     validated: false

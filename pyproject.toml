@@ -29,6 +29,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "orchestrator.stages" = ["*/prompts/*.md"]
+"orchestrator.testkit" = ["*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

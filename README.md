@@ -52,7 +52,7 @@ Built milestone by milestone; see the status marks in [docs/ARCHITECTURE.md](doc
 | M1 | Foundations: versioned artifacts, hash-chained event log, traced LLM client, human gates, cost ceiling | ✅ |
 | M2 | Requirements stage (intake guardrail, analysis, clarification, spec, deterministic validation, approval gate) | ✅ |
 | M3 | Design stage (stack ADR + approval, NFR catalog lookup, OpenAPI + SQLite DDL + traceability, deterministic validation, design approval) | ✅ |
-| M4 | Test Design stage | 🔨 |
+| M4 | Test Design stage (catalog NFR cases by code ‖ functional cases by LLM, joined and validated against the contract, approval gate) | ✅ |
 | M5–M6 | Implementation ‖ acceptance-test code, Build & Verify with fix loop | 🔨 |
 | M7–M8 | Security report, docs, release verdict, metrics | 🔨 |
 | M10 | Brownfield | 🔨 |

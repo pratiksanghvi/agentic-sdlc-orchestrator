@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from importlib import resources
+from pathlib import Path
 from string import Template
 from typing import Annotated, Any, TypedDict
 
@@ -30,6 +31,8 @@ class StageIO(TypedDict, total=False):
     artifacts: Annotated[dict[str, dict], merge_dicts]
     status: str  # running | ended | failed | completed
     status_reason: str
+    workspace: str          # generated product repo (set by Stage 4)
+    rollback_opt_in: bool   # asked once before implementation
 
 
 def ref_of(state: dict, artifact_type: str) -> ArtifactRef:
@@ -108,3 +111,30 @@ def ask_questions(gate: str, title: str, questions: list[dict]) -> list[dict]:
 
 def ask_confirm(gate: str, question: str) -> bool:
     return interrupt({"kind": "confirm", "gate": gate, "question": question})
+
+
+def rollback_node(stage: str):
+    """End-of-run rollback: only if the human opted in, and only after they confirm again."""
+    from orchestrator.execution.git_ops import ProductRepo
+    from orchestrator.observability.node import observed_node
+    from orchestrator.runtime.context import get_context
+
+    @observed_node(stage, "rollback")
+    def rollback(state: dict) -> dict:
+        ctx = get_context(state["run_id"])
+        if not state.get("rollback_opt_in") or not state.get("workspace"):
+            return {}
+        if not ask_confirm("rollback", "Roll the workspace back to the pre-implementation "
+                                       "version now? (the failed work is kept on a branch)"):
+            ctx.log.append("event", "rollback_declined", stage=stage)
+            return {}
+        repo = ProductRepo(Path(state["workspace"]))
+        failed = repo.rollback(ctx.run_id)
+        message = (f"Rolled back to pre-implementation version pre-impl/{ctx.run_id} "
+                   f"(commit {repo.head()[:8]}). The failed implementation is preserved on "
+                   f"branch {failed} for review.")
+        ctx.log.append("decision", "rollback", made_by=f"human:{ctx.config.app.approver_name}",
+                       branch=failed, head=repo.head(), message=message)
+        return {"status_reason": f"{state.get('status_reason', '')} — {message}"}
+
+    return rollback

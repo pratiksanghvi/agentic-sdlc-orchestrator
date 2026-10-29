@@ -113,6 +113,7 @@ class Stack(Strict):
     commands: StackCommands
     path_allowlist: list[str] = Field(min_length=1)
     dependencies: dict[str, str]
+    guidance: str = ""  # stack-specific instructions given to the implementation agent
 
 
 class StackCatalog(Strict):

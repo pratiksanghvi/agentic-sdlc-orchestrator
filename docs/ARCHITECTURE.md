@@ -74,7 +74,7 @@ Every design item below carries a status so reviewers can see exactly what is bu
 8 Release        checklist ‖ metrics → summary → [HUMAN ACCEPT → merge + version tag | REJECT → restart stage | END]
 ```
 
-Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2**, **S1 ‖ S4**, **RR1 ‖ RR2** (each joins before the next step).
+Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2** (✅ M4, joined at T3), **S1 ‖ S4**, **RR1 ‖ RR2** (each joins before the next step).
 
 ### Human gates
 
@@ -85,7 +85,7 @@ Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2**, **S1 ‖ S4**
 | R6 Spec approval | approve / reject + feedback / end run | ✅ M2 (edit ✂️) |
 | Stack approval (after D2) | approve / choose another supported stack (stacks lacking a catalog implementation for a requested NFR are hidden; unvalidated stacks are labelled) / reject + feedback / end run | ✅ M3 |
 | D6 Design approval | approve / reject + feedback → D4 / change the stack decision → D2 / end run | ✅ M3 (edit ✂️) |
-| T4 Test-plan approval | approve / reject + feedback / end run | 🔨 M4 (modify/remove/suggest ✂️) |
+| T4 Test-plan approval | approve / reject + feedback / end run | ✅ M4 (modify/remove/suggest ✂️) |
 | Pre-implementation | "Roll back to pre-implementation version if verify fails? [y/N]" | 🔨 M5 |
 | Stage 5 escalation | implementation hint / end run (with rollback confirmation) — unlimited tries, one fix + one verify per hint | 🔨 M6 (test-case change ✂️) |
 | Stage 6 missing tool | proceed without the check / stop | 🔨 M7 |
@@ -137,12 +137,14 @@ Data store: **SQLite only** (embedded, works in all three stacks, no setup). Pos
 
 ### Stage 3 — Test Design
 
+Implementation: `stages/test_design/`, `contract/openapi.py`. A test case is a list of HTTP steps (method, path with `${var}` placeholders, JSON body, repeat count, expected status or forbidden status, JSON-path / raw-body / header assertions, captures). Cases are tagged `phase: main` or `phase: isolated`; rate-limit cases are isolated because they exhaust a shared per-client budget, so Stage 5 runs them after a service restart. NFR cases use ids TC-900+.
+
 | Step | Type | Behavior | Status |
 |---|---|---|---|
-| T1 NFR cases | code | Generated from each selected catalog entry's validation recipe | 🔨 M4 |
-| T2 Functional cases | LLM | Per AC: ≥1 positive + implied negative/edge cases; TC-n → AC-n.m; HTTP steps + expected status/body assertions; only endpoints/fields in the OpenAPI contract | 🔨 M4 |
-| T3 Validate | code | Every MVP AC covered; endpoints, fields and status codes exist in OpenAPI; unique IDs | 🔨 M4 |
-| T4 Gate | human | Approve / reject + feedback | 🔨 M4 |
+| T1 NFR cases | code | Generated from each selected catalog entry's validation recipe and the OpenAPI contract: OBS-METRICS (call an endpoint, then `/metrics` contains `http_server_requests`); SEC-INPUT (per operation with a JSON body: missing required field, wrong type, oversized body → 400 problem+json, no stack trace); RL-BASIC (send `limit` requests, then expect 429 + `Retry-After`) | ✅ M4 |
+| T2 Functional cases | LLM | Per AC: ≥1 positive + implied negative/edge cases; TC-n → AC-n.m; HTTP steps + expected status/body assertions; only endpoints/fields in the OpenAPI contract | ✅ M4 |
+| T3 Validate | code | Every MVP AC and every planned NFR covered; each step's method + path matches an OpenAPI operation; functional expected statuses are declared for that operation; variables captured before use; JSON bodies parse; unique IDs; bounded retries, then the gate | ✅ M4 |
+| T4 Gate | human | Approve / reject + feedback | ✅ M4 |
 | T4 modify / remove / suggest + T5 suggestion converter (suggestion beyond spec → NEW_REQUIREMENT → offer re-plan; removing last test of an AC → logged waiver) | human + LLM | | ✂️ |
 
 **Independence.** Acceptance tests are written by a separate agent from the approved contract only, stored **outside the product repo**, hidden from and immutable to the implementation agent, and hash-checked before they run.

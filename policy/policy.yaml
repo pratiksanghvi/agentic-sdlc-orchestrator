@@ -6,7 +6,7 @@ input:
 llm:
   schema_retries: 2           # re-ask when structured output fails validation
   max_tokens: 16000
-  request_timeout_s: 600
+  request_timeout_s: 240       # stalled streams fail fast; step retries recover
 
 budgets:
   step_retries: 2             # per-step retries before the stronger-model attempt

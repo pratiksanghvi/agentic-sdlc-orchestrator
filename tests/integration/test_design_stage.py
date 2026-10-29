@@ -59,8 +59,9 @@ def scripts(**over):
 
 def run(make_run, answers, scripts):
     ctx, io, backend = make_run(answers=answers, scripts=scripts)
-    result = run_graph(ctx, build_graph(ctx), {"run_id": ctx.run_id, "requirement_text": REQ,
-                                               "artifacts": {}, "status": "running"})
+    graph = build_graph(ctx, stop_after="design")
+    result = run_graph(ctx, graph, {"run_id": ctx.run_id, "requirement_text": REQ,
+                                    "artifacts": {}, "status": "running"})
     return ctx, io, backend, result
 
 
