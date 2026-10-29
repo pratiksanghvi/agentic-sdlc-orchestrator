@@ -83,8 +83,8 @@ Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2**, **S1 ‖ S4**
 | R3 Clarify (only if blocking ambiguities) | Answer each question (number, own text, or Enter for the suggested default); max 2 rounds, then remaining items become flagged assumptions | ✅ M2 |
 | R3b Ideas loop (propose new requirement ideas, unlimited rounds) | accept / reject / modify / more / done | ✂️ |
 | R6 Spec approval | approve / reject + feedback / end run | ✅ M2 (edit ✂️) |
-| Stack approval (after D2) | approve / choose another supported stack / reject + feedback / end run | 🔨 M3 |
-| D6 Design approval | approve / reject → D3 or D4 + feedback / end run | 🔨 M3 (edit ✂️) |
+| Stack approval (after D2) | approve / choose another supported stack (stacks lacking a catalog implementation for a requested NFR are hidden; unvalidated stacks are labelled) / reject + feedback / end run | ✅ M3 |
+| D6 Design approval | approve / reject + feedback → D4 / change the stack decision → D2 / end run | ✅ M3 (edit ✂️) |
 | T4 Test-plan approval | approve / reject + feedback / end run | 🔨 M4 (modify/remove/suggest ✂️) |
 | Pre-implementation | "Roll back to pre-implementation version if verify fails? [y/N]" | 🔨 M5 |
 | Stage 5 escalation | implementation hint / end run (with rollback confirmation) — unlimited tries, one fix + one verify per hint | 🔨 M6 (test-case change ✂️) |
@@ -120,16 +120,18 @@ Implementation: `stages/requirements/` (graph, prompts, schemas, deterministic r
 
 ### Stage 2 — Design
 
+Implementation: `stages/design/`. Artifacts: `stack_adr` (ADR-001 + stack.json), `nfr_plan`, `design` (openapi.yaml, schema.sql, design.md, design.json, traceability.json).
+
 | Step | Type | Behavior | Status |
 |---|---|---|---|
-| D1 Entry | code | Spec approved and its hash unchanged | 🔨 M3 |
-| D2 Stack | LLM | 2–3 options with pros/cons → ADR-001; recommendation must come from `stacks.yaml` (code-enforced); a stack named in the requirement is honored | 🔨 M3 |
-| Stack gate | human | Approve, or pick another supported stack | 🔨 M3 |
-| D3 NFR lookup | code | `catalog[nfr_id].implementation[stack]` + validation recipe (no LLM) | 🔨 M3 |
-| D4 Architecture | LLM | Modules, **OpenAPI 3** contract, SQLite DDL, primary flows, error model, traceability matrix FR/NFR/AC → endpoint/component/catalog ID | 🔨 M3 |
-| D5 Validate | code | OpenAPI valid; every MVP FR/AC traced; dependencies in allowlist; NFR choices from catalog | 🔨 M3 |
+| D1 Entry | code | Spec approved and its hash unchanged | ✅ M3 |
+| D2 Stack | LLM | 2–3 options with pros/cons → ADR-001; recommendation must come from `stacks.yaml`, must have catalog implementations for every requested NFR (code-enforced), prefers validated stacks; a stack named in the requirement is honored | ✅ M3 |
+| Stack gate | human | Approve, or pick another supported stack | ✅ M3 |
+| D3 NFR lookup | code | `catalog[nfr_id].implementation[stack]` + validation recipe (no LLM) | ✅ M3 |
+| D4 Architecture | LLM | Modules, **OpenAPI 3** contract, SQLite DDL, primary flows, error model, traceability matrix FR/NFR/AC → endpoint/component/catalog ID | ✅ M3 |
+| D5 Validate | code | OpenAPI 3.x parses, every operation has responses, no operational paths; DDL executes in an in-memory SQLite; every MVP FR traced to an existing endpoint; every NFR traced with its catalog ID; modules exist; dependencies in the stack allowlist; bounded retries with findings fed back, then the gate (approve hidden while problems remain) | ✅ M3 |
 | D5 Critic | LLM | Spec mismatches, over-engineering, light security review | ✂️ |
-| D6 Gate | human | Approve / reject → D3 or D4 | 🔨 M3 |
+| D6 Gate | human | Approve / reject → D4 with feedback / change stack → D2 (D3 is deterministic, so there is nothing to re-run there) | ✅ M3 |
 
 Data store: **SQLite only** (embedded, works in all three stacks, no setup). Postgres via Docker Compose 🔭.
 

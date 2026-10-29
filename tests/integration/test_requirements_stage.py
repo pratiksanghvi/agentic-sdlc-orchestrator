@@ -51,8 +51,9 @@ def spec(nfr_quote="Limit clients to 60 requests per minute", with_ac=True):
 
 def run(make_run, answers, scripts, requirement=REQ):
     ctx, io, backend = make_run(answers=answers, scripts=scripts)
-    result = run_graph(ctx, build_graph(ctx), {"run_id": ctx.run_id, "requirement_text":
-                                               requirement, "artifacts": {}, "status": "running"})
+    graph = build_graph(ctx, stop_after="requirements")
+    result = run_graph(ctx, graph, {"run_id": ctx.run_id, "requirement_text": requirement,
+                                    "artifacts": {}, "status": "running"})
     return ctx, io, backend, result
 
 
