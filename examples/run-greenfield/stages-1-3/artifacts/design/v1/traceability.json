@@ -1,0 +1,189 @@
+[
+  {
+    "requirement_id": "FR-1",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.service.ShortCodeGenerator",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-2",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "com.example.shortener.api.RedirectController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-3",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "com.example.shortener.api.RedirectController"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-4",
+    "endpoints": [
+      "GET /api/links/{code}"
+    ],
+    "modules": [
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-5",
+    "endpoints": [
+      "GET /{code}",
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "com.example.shortener.api.RedirectController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-6",
+    "endpoints": [
+      "GET /{code}",
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "com.example.shortener.api.RedirectController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-7",
+    "endpoints": [
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-8",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.service.ShortCodeGenerator"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-9",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.service.ShortCodeGenerator",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-10",
+    "endpoints": [
+      "POST /api/links"
+    ],
+    "modules": [
+      "com.example.shortener.service.UrlValidator",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.api.ProblemExceptionHandler"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-11",
+    "endpoints": [
+      "GET /api/links/{code}",
+      "POST /api/links"
+    ],
+    "modules": [
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-12",
+    "endpoints": [
+      "GET /{code}",
+      "GET /api/links/{code}",
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.api.ProblemExceptionHandler",
+      "com.example.shortener.api.RedirectController",
+      "com.example.shortener.api.LinkController"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-13",
+    "endpoints": [
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-14",
+    "endpoints": [
+      "GET /{code}"
+    ],
+    "modules": [
+      "com.example.shortener.api.RedirectController",
+      "com.example.shortener.service.LinkService",
+      "com.example.shortener.persistence.ShortLinkRepository"
+    ],
+    "catalog_ids": []
+  },
+  {
+    "requirement_id": "FR-15",
+    "endpoints": [
+      "POST /api/links",
+      "GET /{code}",
+      "GET /api/links/{code}",
+      "GET /api/links/{code}/analytics"
+    ],
+    "modules": [
+      "com.example.shortener.ShortenerApplication",
+      "com.example.shortener.api.LinkController",
+      "com.example.shortener.api.RedirectController"
+    ],
+    "catalog_ids": []
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "type": "engineering_summary",
+  "version": 1,
+  "produced_by": "RR3",
+  "attempt": 1,
+  "created_at": "2026-10-29T17:44:28.527Z",
+  "inputs": [],
+  "files": {
+    "ENGINEERING_SUMMARY.md": "sha256:3abebfcf76b00bf333529bdcd4ca0eb0013d0efb21a7549691fcb8554370d5df",
+    "metrics.json": "sha256:23899643aaffe6f1a6038c3e6a98d887ab5b64b6a07a80eeaf0cc754f97faf45"
+  },
+  "hash": "sha256:015a5fcfae93bade21a38f55453d6549a2d219963a4762b989745419384cfeda"
+}

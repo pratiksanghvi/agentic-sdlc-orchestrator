@@ -1,0 +1,17 @@
+[
+  {
+    "id": "C-1",
+    "question": "Which catalog capability does 'reliability features' refer to: per-client rate limiting on write endpoints (RL-BASIC), contract-based input validation with problem+json errors (SEC-INPUT), Prometheus request metrics at /metrics (OBS-METRICS), or none? Other reliability concerns, such as uptime, failover or durability guarantees, cannot be built or validated.",
+    "answer": "none (no NFR is added until the user picks one or more catalog entries)"
+  },
+  {
+    "id": "C-2",
+    "question": "Which operations make up the 'core APIs'?",
+    "answer": "Create a short link from a long URL, redirect from the short code to the original URL, and retrieve a short link's details"
+  },
+  {
+    "id": "C-3",
+    "question": "What should 'analytics' capture and expose for each short link?",
+    "answer": "Total click count per short link, plus the timestamp of the last click, exposed via an API call for that link"
+  }
+]

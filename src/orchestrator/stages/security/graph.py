@@ -88,9 +88,20 @@ def s5_report(state: SecurityState) -> dict[str, Any]:
                         produced_by="S5")
     ctx.log.append("event", "security_report", stage=STAGE, findings=len(findings),
                    artifact=ref.model_dump())
-    body = "\n".join(lines[2:]) + "\n\nThis report is for awareness; the run continues."
-    show_notice("security_report", f"Stage 6 Security · {len(findings)} finding(s)", body)
     return {"artifacts": {"security_report": ref.model_dump()}}
+
+
+@observed_node(STAGE, "S6_notice")
+def s6_notice(state: SecurityState) -> dict[str, Any]:
+    """Pause only to show the report. Kept separate from S5 because LangGraph re-executes an
+    interrupted node from its start on resume: nodes that pause must have no side effects
+    before the pause."""
+    ctx = get_context(state["run_id"])
+    md = ctx.store.read(ref_of(state, "security_report"))["security_report.md"]
+    count = len(state["secret_findings"]) + len(state["change_findings"])
+    body = "\n".join(md.splitlines()[2:]) + "\n\nThis report is for awareness; the run continues."
+    show_notice("security_report", f"Stage 6 Security · {count} finding(s)", body)
+    return {}
 
 
 def build() -> StateGraph:
@@ -98,8 +109,10 @@ def build() -> StateGraph:
     g.add_node("S1_secrets", s1_secrets)
     g.add_node("S4_change_control", s4_change_control)
     g.add_node("S5_report", s5_report)
+    g.add_node("S6_notice", s6_notice)
     g.add_edge(START, "S1_secrets")
     g.add_edge(START, "S4_change_control")
     g.add_edge(["S1_secrets", "S4_change_control"], "S5_report")
-    g.add_edge("S5_report", END)
+    g.add_edge("S5_report", "S6_notice")
+    g.add_edge("S6_notice", END)
     return g

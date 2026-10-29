@@ -1,0 +1,14 @@
+{
+  "type": "docs",
+  "version": 1,
+  "produced_by": "DC",
+  "attempt": 1,
+  "created_at": "2026-10-29T17:44:28.501Z",
+  "inputs": [],
+  "files": {
+    "README.md": "sha256:8870b7127a3355290a2f5c5fc4d05c4de14baeb5166b8bd408a4eadf8ad39a64",
+    "API.md": "sha256:1d12cbcce944599a6570c04c0861a1cc4a577ed0711d3a5bea2442cb808a659b",
+    "warnings.json": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "hash": "sha256:ca80779cce3eed072b663c72233cb3df95199bdd60a1ee7149a4bc017d72cdcf"
+}

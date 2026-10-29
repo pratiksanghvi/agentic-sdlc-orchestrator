@@ -1,0 +1,32 @@
+{
+  "type": "design",
+  "version": 1,
+  "produced_by": "D4",
+  "attempt": 1,
+  "created_at": "2026-10-29T17:35:09.426Z",
+  "inputs": [
+    {
+      "type": "spec",
+      "version": 1,
+      "hash": "sha256:e700a079efc8ef51731cc115c5c10f40b03e40ea2bf5c5c1577ee6b2c91ece52"
+    },
+    {
+      "type": "stack_adr",
+      "version": 1,
+      "hash": "sha256:ef228c3340fbe8fe5f3614707cacf695911b1496df05026ad7d113bbab6831cc"
+    },
+    {
+      "type": "nfr_plan",
+      "version": 1,
+      "hash": "sha256:30709677c82bc41242af172cde5e2761986444b40b62888370f5d93e45560c31"
+    }
+  ],
+  "files": {
+    "openapi.yaml": "sha256:38d5ac848a93fd331d5e94ba3d9ea4d8d34bdc2120333c4718268a4553f27ed9",
+    "schema.sql": "sha256:92d8cbf13fae27167ab08dab25890521f4bac7fa736cec6b170cdb5177163407",
+    "design.json": "sha256:8ec86a353ccb0b317dfa5ddd9d2fc0972d3ef5ee601596842467a74b45e59d2e",
+    "design.md": "sha256:a6a0a796a7ed853b2b11d5a3104d7b0d979e2625123f6b627891da80dce45018",
+    "traceability.json": "sha256:836c9ceb1fa643854226bea821e4d93bb89fa87af9527fac4759dca93a8249e8"
+  },
+  "hash": "sha256:c72bfaea3f6ec3e2161085c7320f37027f2f900a794fa8c0bbb652cc23e96336"
+}

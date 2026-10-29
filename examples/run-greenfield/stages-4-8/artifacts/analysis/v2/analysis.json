@@ -1,0 +1,140 @@
+{
+  "intent": "Provide a URL shortener service that creates short links from long URLs, redirects short codes to their original URLs, returns link details, and exposes per-link click analytics (total clicks and last click time) through an API.",
+  "functional_needs": [
+    {
+      "statement": "A client can create a short link by submitting a long URL; the system returns a short code for that link.",
+      "source_quote": "Create a short link from a long URL"
+    },
+    {
+      "statement": "Requesting a short code redirects the caller to the original long URL.",
+      "source_quote": "redirect from the short code to the original URL"
+    },
+    {
+      "statement": "A client can retrieve the details of an existing short link.",
+      "source_quote": "retrieve a short link's details"
+    },
+    {
+      "statement": "The system records the total number of clicks (redirects) for each short link.",
+      "source_quote": "Total click count per short link"
+    },
+    {
+      "statement": "The system records the timestamp of the most recent click for each short link.",
+      "source_quote": "plus the timestamp of the last click"
+    },
+    {
+      "statement": "A client can retrieve a short link's analytics (total click count and last click timestamp) through an API call for that link.",
+      "source_quote": "exposed via an API call for that link"
+    }
+  ],
+  "nfr_asks": [
+    {
+      "text": "Generic 'reliability features'; per clarification C-1 the user selected no catalog entry, so no NFR is added.",
+      "source_quote": "reliability features",
+      "category": "other",
+      "classification": "VAGUE",
+      "catalog_id": null
+    }
+  ],
+  "ambiguities": [
+    {
+      "id": "Q-1",
+      "question": "Which HTTP redirect status should the redirect use: temporary (302/307) or permanent (301/308)?",
+      "why_it_matters": "The status code is externally visible, and permanent redirects are cached by browsers, so repeat visits would bypass the service and not be counted as clicks.",
+      "recommended_default": "Use a temporary redirect (302) so every click reaches the service and is counted.",
+      "severity": "BLOCKING",
+      "options": [
+        "302 Found (temporary)",
+        "307 Temporary Redirect",
+        "301 Moved Permanently",
+        "308 Permanent Redirect"
+      ]
+    },
+    {
+      "id": "Q-2",
+      "question": "What counts as a click: every redirect request served, or only unique visitors?",
+      "why_it_matters": "Determines the click count value returned by the analytics API and what data must be kept.",
+      "recommended_default": "Every successful redirect request increments the count by one.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Every successful redirect counts",
+        "Only unique visitors count"
+      ]
+    },
+    {
+      "id": "Q-3",
+      "question": "When the same long URL is submitted more than once, should the system return the existing short link or create a new one?",
+      "why_it_matters": "Changes the create response and how click counts are split across links.",
+      "recommended_default": "Create a new short link on every request.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Always create a new short link",
+        "Return the existing short link for the same URL"
+      ]
+    },
+    {
+      "id": "Q-4",
+      "question": "Can clients choose a custom short code (alias), or are codes always system-generated?",
+      "why_it_matters": "Affects the create request shape and conflict handling.",
+      "recommended_default": "Short codes are always system-generated.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "System-generated only",
+        "Optional custom alias with conflict error"
+      ]
+    },
+    {
+      "id": "Q-5",
+      "question": "Which long URLs are accepted on create?",
+      "why_it_matters": "Determines which create requests are rejected as invalid.",
+      "recommended_default": "Accept only absolute http and https URLs; reject anything else with a validation error.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Absolute http/https URLs only",
+        "Any syntactically valid URI"
+      ]
+    },
+    {
+      "id": "Q-6",
+      "question": "Which fields should a short link's details include?",
+      "why_it_matters": "Defines the details response shape.",
+      "recommended_default": "Short code, original URL, and creation timestamp; analytics are returned by their own call.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Short code, original URL, creation timestamp",
+        "Same plus click count and last click timestamp"
+      ]
+    },
+    {
+      "id": "Q-7",
+      "question": "What should happen when a requested short code does not exist (redirect, details, or analytics)?",
+      "why_it_matters": "Defines error behavior visible to clients.",
+      "recommended_default": "Return a not-found (404) error.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Return 404 Not Found",
+        "Redirect to a default page"
+      ]
+    },
+    {
+      "id": "Q-8",
+      "question": "What should the analytics call return for the last click timestamp of a link that has never been clicked?",
+      "why_it_matters": "Defines the analytics response for new links.",
+      "recommended_default": "Click count 0 and last click timestamp null.",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Count 0 and null timestamp",
+        "Count 0 and field omitted"
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "Rate limiting, contract-based input validation (SEC-INPUT), and Prometheus metrics: no NFR selected per C-1",
+    "Uptime, failover, and durability guarantees (cannot be built or validated per C-1)",
+    "Analytics beyond total click count and last click timestamp (e.g., referrers, geography, devices, time-series breakdowns)",
+    "User accounts, authentication, and link ownership",
+    "Editing or deleting short links",
+    "Link expiration",
+    "Custom aliases (unless chosen in Q-4)"
+  ],
+  "stack_constraint": null
+}

@@ -1,0 +1,124 @@
+{
+  "attempt": 2,
+  "head": "a90520fd357ed2928b2a701e3aa11e405679824c",
+  "hinted": false,
+  "build": {
+    "ok": true,
+    "duration_ms": 3066,
+    "output_tail": "12:44:13.993 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.shortener.ShortenerApplicationTests]: ShortenerApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.\n12:44:14.020 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.shortener.ShortenerApplication for test class com.example.shortener.ShortenerApplicationTests\n\n  .   ____          _            __ _ _\n /\\\\ / ___'_ __ _ _(_)_ __  __ _ \\ \\ \\ \\\n( ( )\\___ | '_ | '_| | '_ \\/ _` | \\ \\ \\ \\\n \\\\/  ___)| |_)| | | | | || (_| |  ) ) ) )\n  '  |____| .__|_| |_|_| |_\\__, | / / / /\n =========|_|==============|___/=/_/_/_/\n\n :: Spring Boot ::                (v3.5.7)\n\n2026-10-29T12:44:14.128-05:00  INFO 32215 --- [           main] c.e.shortener.ShortenerApplicationTests  : Starting ShortenerApplicationTests using Java 26.0.2 with PID 32215 (started by psanghvi in /Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with)\n2026-10-29T12:44:14.129-05:00  INFO 32215 --- [           main] c.e.shortener.ShortenerApplicationTests  : No active profile set, falling back to 1 default profile: \"default\"\n2026-10-29T12:44:14.356-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...\n2026-10-29T12:44:14.521-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.sqlite.jdbc4.JDBC4Connection@c017175\n2026-10-29T12:44:14.522-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.\n2026-10-29T12:44:14.684-05:00  INFO 32215 --- [           main] c.e.shortener.ShortenerApplicationTests  : Started ShortenerApplicationTests in 0.625 seconds (process running for 0.886)\n2026-10-29T12:44:14.961-05:00  INFO 32215 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.example.shortener.persistence.ShortLinkRepositoryTest]: ShortLinkRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.\n2026-10-29T12:44:14.964-05:00  INFO 32215 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.example.shortener.ShortenerApplication for test class com.example.shortener.persistence.ShortLinkRepositoryTest\n\n  .   ____          _            __ _ _\n /\\\\ / ___'_ __ _ _(_)_ __  __ _ \\ \\ \\ \\\n( ( )\\___ | '_ | '_| | '_ \\/ _` | \\ \\ \\ \\\n \\\\/  ___)| |_)| | | | | || (_| |  ) ) ) )\n  '  |____| .__|_| |_|_| |_\\__, | / / / /\n =========|_|==============|___/=/_/_/_/\n\n :: Spring Boot ::                (v3.5.7)\n\n2026-10-29T12:44:14.971-05:00  INFO 32215 --- [           main] c.e.s.p.ShortLinkRepositoryTest          : Starting ShortLinkRepositoryTest using Java 26.0.2 with PID 32215 (started by psanghvi in /Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with)\n2026-10-29T12:44:14.971-05:00  INFO 32215 --- [           main] c.e.s.p.ShortLinkRepositoryTest          : No active profile set, falling back to 1 default profile: \"default\"\n2026-10-29T12:44:15.018-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...\n2026-10-29T12:44:15.018-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection org.sqlite.jdbc4.JDBC4Connection@63326a3a\n2026-10-29T12:44:15.018-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.\n2026-10-29T12:44:15.052-05:00  INFO 32215 --- [           main] c.e.s.p.ShortLinkRepositoryTest          : Started ShortLinkRepositoryTest in 0.086 seconds (process running for 1.253)\n2026-10-29T12:44:15.071-05:00  INFO 32215 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.example.shortener.api.LinkApiTest]: LinkApiTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.\n2026-10-29T12:44:15.075-05:00  INFO 32215 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.example.shortener.ShortenerApplication for test class com.example.shortener.api.LinkApiTest\n\n  .   ____          _            __ _ _\n /\\\\ / ___'_ __ _ _(_)_ __  __ _ \\ \\ \\ \\\n( ( )\\___ | '_ | '_| | '_ \\/ _` | \\ \\ \\ \\\n \\\\/  ___)| |_)| | | | | || (_| |  ) ) ) )\n  '  |____| .__|_| |_|_| |_\\__, | / / / /\n =========|_|==============|___/=/_/_/_/\n\n :: Spring Boot ::                (v3.5.7)\n\n2026-10-29T12:44:15.082-05:00  INFO 32215 --- [           main] com.example.shortener.api.LinkApiTest    : Starting LinkApiTest using Java 26.0.2 with PID 32215 (started by psanghvi in /Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with)\n2026-10-29T12:44:15.082-05:00  INFO 32215 --- [           main] com.example.shortener.api.LinkApiTest    : No active profile set, falling back to 1 default profile: \"default\"\n2026-10-29T12:44:15.129-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...\n2026-10-29T12:44:15.130-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection org.sqlite.jdbc4.JDBC4Connection@73da303e\n2026-10-29T12:44:15.130-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.\n2026-10-29T12:44:15.160-05:00  INFO 32215 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''\n2026-10-29T12:44:15.160-05:00  INFO 32215 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''\n2026-10-29T12:44:15.160-05:00  INFO 32215 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms\n2026-10-29T12:44:15.163-05:00  INFO 32215 --- [           main] com.example.shortener.api.LinkApiTest    : Started LinkApiTest in 0.087 seconds (process running for 1.365)\n2026-10-29T12:44:15.249-05:00  INFO 32215 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.example.shortener.service.LinkServiceTest]: LinkServiceTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.\n2026-10-29T12:44:15.251-05:00  INFO 32215 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.example.shortener.ShortenerApplication for test class com.example.shortener.service.LinkServiceTest\n\n  .   ____          _            __ _ _\n /\\\\ / ___'_ __ _ _(_)_ __  __ _ \\ \\ \\ \\\n( ( )\\___ | '_ | '_| | '_ \\/ _` | \\ \\ \\ \\\n \\\\/  ___)| |_)| | | | | || (_| |  ) ) ) )\n  '  |____| .__|_| |_|_| |_\\__, | / / / /\n =========|_|==============|___/=/_/_/_/\n\n :: Spring Boot ::                (v3.5.7)\n\n2026-10-29T12:44:15.256-05:00  INFO 32215 --- [           main] c.e.shortener.service.LinkServiceTest    : Starting LinkServiceTest using Java 26.0.2 with PID 32215 (started by psanghvi in /Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with)\n2026-10-29T12:44:15.256-05:00  INFO 32215 --- [           main] c.e.shortener.service.LinkServiceTest    : No active profile set, falling back to 1 default profile: \"default\"\n2026-10-29T12:44:15.292-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...\n2026-10-29T12:44:15.292-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection org.sqlite.jdbc4.JDBC4Connection@34ede267\n2026-10-29T12:44:15.292-05:00  INFO 32215 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.\n2026-10-29T12:44:15.313-05:00  INFO 32215 --- [           main] c.e.shortener.service.LinkServiceTest    : Started LinkServiceTest in 0.061 seconds (process running for 1.515)\nWARNING: A restricted method in java.lang.System has been called\nWARNING: java.lang.System::load has been called by org.sqlite.SQLiteJDBCLoader in an unnamed module (file:/Users/psanghvi/.m2/repository/org/xerial/sqlite-jdbc/3.50.3.0/sqlite-jdbc-3.50.3.0.jar)\nWARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module\nWARNING: Restricted methods will be blocked in a future release unless native access is enabled\n\nMockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nWARNING: A Java agent has been loaded dynamically (/Users/psanghvi/.m2/repository/net/bytebuddy/byte-buddy-agent/1.17.8/byte-buddy-agent-1.17.8.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release"
+  },
+  "suite": {
+    "type": "acceptance_suite",
+    "version": 1,
+    "hash": "sha256:6931c5f1ccd3ba66ffe09ae660f5d12247f78a004438383b13fd4e1945fd167f"
+  },
+  "startup": {
+    "ok": true,
+    "reason": "ready",
+    "startup_ms": 1230,
+    "error_lines": [],
+    "log_tail": "\n  .   ____          _            __ _ _\n /\\\\ / ___'_ __ _ _(_)_ __  __ _ \\ \\ \\ \\\n( ( )\\___ | '_ | '_| | '_ \\/ _` | \\ \\ \\ \\\n \\\\/  ___)| |_)| | | | | || (_| |  ) ) ) )\n  '  |____| .__|_| |_|_| |_\\__, | / / / /\n =========|_|==============|___/=/_/_/_/\n\n :: Spring Boot ::                (v3.5.7)\n\n2026-10-29T12:44:15.921-05:00  INFO 32220 --- [           main] c.e.shortener.ShortenerApplication       : Starting ShortenerApplication v1.0.0 using Java 25.0.4 with PID 32220 (/Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with/target/shortener-1.0.0.jar started by psanghvi in /Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with)\n2026-10-29T12:44:15.922-05:00  INFO 32220 --- [           main] c.e.shortener.ShortenerApplication       : No active profile set, falling back to 1 default profile: \"default\"\n2026-10-29T12:44:16.239-05:00  INFO 32220 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 50025 (http)\n2026-10-29T12:44:16.244-05:00  INFO 32220 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]\n2026-10-29T12:44:16.244-05:00  INFO 32220 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]\n2026-10-29T12:44:16.252-05:00  INFO 32220 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext\n2026-10-29T12:44:16.252-05:00  INFO 32220 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 308 ms\n2026-10-29T12:44:16.291-05:00  INFO 32220 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...\nWARNING: A restricted method in java.lang.System has been called\nWARNING: java.lang.System::load has been called by org.sqlite.SQLiteJDBCLoader in an unnamed module (jar:nested:/Users/psanghvi/Documents/work/projects/agentic-sdlc-orchestrator/workspaces/url-shortener-service-with/target/shortener-1.0.0.jar/!BOOT-INF/lib/sqlite-jdbc-3.50.3.0.jar!/)\nWARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module\nWARNING: Restricted methods will be blocked in a future release unless native access is enabled\n\n2026-10-29T12:44:16.468-05:00  INFO 32220 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.sqlite.jdbc4.JDBC4Connection@3bd2af5b\n2026-10-29T12:44:16.469-05:00  INFO 32220 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.\n2026-10-29T12:44:16.606-05:00  INFO 32220 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 50025 (http) with context path '/'\n2026-10-29T12:44:16.614-05:00  INFO 32220 --- [           main] c.e.shortener.ShortenerApplication       : Started ShortenerApplication in 0.828 seconds (process running for 0.996)\nSERVICE_READY port=50025\n2026-10-29T12:44:17.199-05:00  INFO 32220 --- [io-50025-exec-3] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'\n2026-10-29T12:44:17.199-05:00  INFO 32220 --- [io-50025-exec-3] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'\n2026-10-29T12:44:17.199-05:00  INFO 32220 --- [io-50025-exec-3] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms"
+  },
+  "acceptance": {
+    "test_tc_1": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_2": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_3": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_4": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_5": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_6": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_7": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_8": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_9": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_10": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_11": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_12": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_13": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_14": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_15": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_16": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_17": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_18": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_19": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_20": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_21": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_22": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_23": {
+      "passed": true,
+      "message": ""
+    },
+    "test_tc_24": {
+      "passed": true,
+      "message": ""
+    }
+  },
+  "tests_total": 24,
+  "tests_passed": 24,
+  "passed": true,
+  "failed_stage": null
+}

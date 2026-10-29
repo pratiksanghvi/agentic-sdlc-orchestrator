@@ -1,0 +1,1560 @@
+[
+  {
+    "id": "TC-1",
+    "covers": "AC-1.1",
+    "title": "Create short link for a valid https URL returns 201 with a non-empty short code",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/some/long/path\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.shortCode",
+            "op": "matches",
+            "value": "^\\S+$"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-2",
+    "covers": "AC-1.2",
+    "title": "Details of a just-created link return the original URL",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/some/long/path\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get details",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/some/long/path"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-3",
+    "covers": "AC-2.1",
+    "title": "Redirect Location header equals the original long URL",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/target\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Request redirect without following",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/target"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-4",
+    "covers": "AC-3.1",
+    "title": "Redirect status code is exactly 302",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/target\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Request redirect without following",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-5",
+    "covers": "AC-4.1",
+    "title": "Details return the same short code that was requested",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/some/long/path\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get details",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-6",
+    "covers": "AC-5.1",
+    "title": "Three redirects produce a click count of 3",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/count3\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Verify initial click count is 0",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "0"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect 3 times",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 3,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "3"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-7",
+    "covers": "AC-5.2",
+    "title": "Clicks are counted per link independently (A=2, B=1)",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link A",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/a\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeA",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Create link B",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/b\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeB",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect A twice",
+        "method": "GET",
+        "path": "/${codeA}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 2,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect B once",
+        "method": "GET",
+        "path": "/${codeB}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics for A",
+        "method": "GET",
+        "path": "/api/links/${codeA}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "2"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics for B",
+        "method": "GET",
+        "path": "/api/links/${codeB}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "1"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-8",
+    "covers": "AC-6.1",
+    "title": "Last-click timestamp is present as a date-time after one redirect",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/lastclick\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect once",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.lastClickedAt",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-9",
+    "covers": "AC-6.2",
+    "title": "A second redirect updates the last-click timestamp",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/update\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "First redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics after first click",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.lastClickedAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "l1",
+            "json_path": "$.lastClickedAt"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Second redirect",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics after second click",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "2"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "not_contains",
+            "value": "${l1}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-10",
+    "covers": "AC-7.1",
+    "title": "Analytics after one click report count 1 and non-null last-click timestamp",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/analytics\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect once",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          },
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "1"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-11",
+    "covers": "AC-8.1",
+    "title": "Two links for different URLs get different service-generated codes",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create first link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/first\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "matches",
+            "value": "^\\S+$"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeA",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Create second link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/second\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "matches",
+            "value": "^\\S+$"
+          },
+          {
+            "target": "$.shortCode",
+            "op": "not_contains",
+            "value": "${codeA}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeB",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Details of first link map to first URL",
+        "method": "GET",
+        "path": "/api/links/${codeA}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/first"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Details of second link map to second URL",
+        "method": "GET",
+        "path": "/api/links/${codeB}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/second"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-12",
+    "covers": "AC-9.1",
+    "title": "Same long URL submitted twice yields different short codes",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create first link for dup URL",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/dup\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeA",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Create second link for dup URL",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/dup\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          },
+          {
+            "target": "$.shortCode",
+            "op": "not_contains",
+            "value": "${codeA}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-13",
+    "covers": "AC-9.2",
+    "title": "Links for the same URL count clicks independently",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create link A",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/samecount\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeA",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Create link B with same URL",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/samecount\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "codeB",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect A once",
+        "method": "GET",
+        "path": "/${codeA}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics for A",
+        "method": "GET",
+        "path": "/api/links/${codeA}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "1"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics for B",
+        "method": "GET",
+        "path": "/api/links/${codeB}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "0"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-14",
+    "covers": "AC-10.1",
+    "title": "ftp URL is rejected with 400 and no short code",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with ftp URL",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"ftp://example.com/file\"}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-15",
+    "covers": "AC-10.2",
+    "title": "Relative path is rejected with 400 and no short code",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with relative path",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"/just/a/path\"}",
+        "repeat": 1,
+        "expect_status": 400,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "not_exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-16",
+    "covers": "AC-10.3",
+    "title": "Plain http URL without path is accepted",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create with http://example.com",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"http://example.com\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "matches",
+            "value": "^\\S+$"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-17",
+    "covers": "AC-11.1",
+    "title": "Details include short code, original URL and creation timestamp",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/details\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get details",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          },
+          {
+            "target": "$.longUrl",
+            "op": "equals",
+            "value": "https://example.com/details"
+          },
+          {
+            "target": "$.createdAt",
+            "op": "matches",
+            "value": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-18",
+    "covers": "AC-12.1",
+    "title": "Redirect for unknown code returns 404",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Redirect unknown code",
+        "method": "GET",
+        "path": "/doesnotexist123",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 404,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-19",
+    "covers": "AC-12.2",
+    "title": "Details for unknown code return 404",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Details unknown code",
+        "method": "GET",
+        "path": "/api/links/doesnotexist123",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 404,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-20",
+    "covers": "AC-12.3",
+    "title": "Analytics for unknown code return 404",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Analytics unknown code",
+        "method": "GET",
+        "path": "/api/links/doesnotexist123/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 404,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-21",
+    "covers": "AC-13.1",
+    "title": "Never-clicked link reports 0 clicks and no last-click timestamp",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/never\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "0"
+          },
+          {
+            "target": "$.lastClickedAt",
+            "op": "not_contains",
+            "value": ":"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-22",
+    "covers": "AC-14.1",
+    "title": "Five identical redirects from the same client count 5 clicks",
+    "kind": "edge",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/five\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect 5 times with identical headers",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [
+          {
+            "name": "User-Agent",
+            "value": "qa-acceptance-client/1.0"
+          }
+        ],
+        "body_json": null,
+        "repeat": 5,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "5"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-23",
+    "covers": "AC-14.2",
+    "title": "Redirect for unknown code does not increment an existing link's count",
+    "kind": "negative",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create short link",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/untouched\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect unknown code",
+        "method": "GET",
+        "path": "/doesnotexist123",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 404,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Get analytics for existing link",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.clickCount",
+            "op": "equals",
+            "value": "0"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  },
+  {
+    "id": "TC-24",
+    "covers": "AC-15.1",
+    "title": "All operations succeed without credentials",
+    "kind": "positive",
+    "phase": "main",
+    "steps": [
+      {
+        "name": "Create without credentials",
+        "method": "POST",
+        "path": "/api/links",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body_json": "{\"url\":\"https://example.com/public\"}",
+        "repeat": 1,
+        "expect_status": 201,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "exists",
+            "value": null
+          }
+        ],
+        "header_assertions": [],
+        "capture": [
+          {
+            "var": "code",
+            "json_path": "$.shortCode"
+          }
+        ],
+        "follow_redirects": false
+      },
+      {
+        "name": "Redirect without credentials",
+        "method": "GET",
+        "path": "/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 302,
+        "expect_status_not": null,
+        "body_assertions": [],
+        "header_assertions": [
+          {
+            "target": "Location",
+            "op": "equals",
+            "value": "https://example.com/public"
+          }
+        ],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Details without credentials",
+        "method": "GET",
+        "path": "/api/links/${code}",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      },
+      {
+        "name": "Analytics without credentials",
+        "method": "GET",
+        "path": "/api/links/${code}/analytics",
+        "headers": [],
+        "body_json": null,
+        "repeat": 1,
+        "expect_status": 200,
+        "expect_status_not": null,
+        "body_assertions": [
+          {
+            "target": "$.shortCode",
+            "op": "equals",
+            "value": "${code}"
+          }
+        ],
+        "header_assertions": [],
+        "capture": [],
+        "follow_redirects": false
+      }
+    ]
+  }
+]

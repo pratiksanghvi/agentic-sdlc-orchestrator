@@ -1,0 +1,19 @@
+{
+  "type": "stack_adr",
+  "version": 1,
+  "produced_by": "D2",
+  "attempt": 1,
+  "created_at": "2026-10-29T17:33:55.467Z",
+  "inputs": [
+    {
+      "type": "spec",
+      "version": 1,
+      "hash": "sha256:e700a079efc8ef51731cc115c5c10f40b03e40ea2bf5c5c1577ee6b2c91ece52"
+    }
+  ],
+  "files": {
+    "stack.json": "sha256:1980f80fa5b70564ba65b3d67b9888b144a311637f1059455eacf11f778439f6",
+    "adr-001-stack.md": "sha256:aeb138299bdcaa40cfee8e505c4ea1e8fc34e5a805120f73ff74e68c97dbff9b"
+  },
+  "hash": "sha256:ef228c3340fbe8fe5f3614707cacf695911b1496df05026ad7d113bbab6831cc"
+}

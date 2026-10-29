@@ -1,0 +1,78 @@
+{
+  "run_id": "live-td-1",
+  "status": "running",
+  "final_verdict": null,
+  "end_to_end_ms": 881033,
+  "time_split_ms": {
+    "human_wait": 0,
+    "tools": 0,
+    "agent_and_orchestration": 881033
+  },
+  "llm": {
+    "calls": 8,
+    "schema_retries": 0,
+    "failed_calls": 1,
+    "input_tokens": 34805,
+    "output_tokens": 37880,
+    "cost_usd": 0.8968,
+    "per_stage": {
+      "requirements": {
+        "calls": 5.0,
+        "input_tokens": 12771.0,
+        "output_tokens": 13865.0,
+        "cost_usd": 0.3284,
+        "first_attempts": 5.0,
+        "first_attempt_ok": 4.0,
+        "first_pass_rate": 0.8,
+        "latency_p50_ms": 28171,
+        "latency_p95_ms": 37709
+      },
+      "design": {
+        "calls": 2.0,
+        "input_tokens": 14821.0,
+        "output_tokens": 11703.0,
+        "cost_usd": 0.2933,
+        "first_attempts": 2.0,
+        "first_attempt_ok": 2.0,
+        "first_pass_rate": 1.0,
+        "latency_p50_ms": 48166,
+        "latency_p95_ms": 73932
+      },
+      "test_design": {
+        "calls": 1.0,
+        "input_tokens": 7213.0,
+        "output_tokens": 12312.0,
+        "cost_usd": 0.2751,
+        "first_attempts": 1.0,
+        "first_attempt_ok": 1.0,
+        "first_pass_rate": 1.0,
+        "latency_p50_ms": 90709,
+        "latency_p95_ms": 90709
+      }
+    }
+  },
+  "reliability": {
+    "step_retries": 1,
+    "task_attempts_failed": 0,
+    "verification_attempts": 0,
+    "fixes": 0,
+    "rollbacks": 0,
+    "mttr_ms": null,
+    "mttr_auto_only_ms": null
+  },
+  "gates": {
+    "spec_approval": {
+      "APPROVE": 1
+    },
+    "stack_approval": {
+      "APPROVE": 1
+    },
+    "design_approval": {
+      "APPROVE": 1
+    },
+    "test_plan_approval": {
+      "APPROVE": 1
+    }
+  },
+  "audit_chain_intact": true
+}

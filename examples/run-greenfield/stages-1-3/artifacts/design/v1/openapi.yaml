@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener Service with Click Analytics
+  version: 1.0.0
+  description: Create short links, redirect by short code (302) and read per-link details and click analytics. All operations are public (no authentication).
+paths:
+  /api/links:
+    post:
+      operationId: createShortLink
+      summary: Create a new short link for an absolute http/https URL (FR-1, FR-8, FR-9, FR-10, FR-15)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkRequest'
+      responses:
+        '201':
+          description: Short link created. A new independent link is created on every call.
+          headers:
+            Location:
+              description: Path of the created link's details resource (/api/links/{code}).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/links/{code}:
+    get:
+      operationId: getShortLink
+      summary: Get a short link's details (FR-4, FR-11, FR-12, FR-15)
+      parameters:
+        - $ref: '#/components/parameters/ShortCode'
+      responses:
+        '200':
+          description: Short link details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/links/{code}/analytics:
+    get:
+      operationId: getShortLinkAnalytics
+      summary: Get a short link's click analytics (FR-7, FR-12, FR-13, FR-15)
+      parameters:
+        - $ref: '#/components/parameters/ShortCode'
+      responses:
+        '200':
+          description: Click analytics for the link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkAnalytics'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /{code}:
+    get:
+      operationId: redirectToLongUrl
+      summary: Redirect to the original URL and count the click (FR-2, FR-3, FR-5, FR-6, FR-12, FR-14, FR-15)
+      parameters:
+        - $ref: '#/components/parameters/ShortCode'
+      responses:
+        '302':
+          description: Temporary redirect to the original long URL. The click is counted.
+          headers:
+            Location:
+              description: The original long URL associated with the short code.
+              schema:
+                type: string
+                format: uri
+            Cache-Control:
+              description: Always no-store, so every click reaches the service.
+              schema:
+                type: string
+                example: no-store
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    ShortCode:
+      name: code
+      in: path
+      required: true
+      description: Service-generated short code
+      schema:
+        type: string
+        example: aB3xK9q
+  schemas:
+    CreateLinkRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: Absolute URL with scheme http or https
+          example: https://example.com/some/long/path
+    ShortLink:
+      type: object
+      required:
+        - shortCode
+        - longUrl
+        - createdAt
+      properties:
+        shortCode:
+          type: string
+          example: aB3xK9q
+        longUrl:
+          type: string
+          format: uri
+          example: https://example.com/some/long/path
+        createdAt:
+          type: string
+          format: date-time
+    LinkAnalytics:
+      type: object
+      required:
+        - shortCode
+        - clickCount
+      properties:
+        shortCode:
+          type: string
+          example: aB3xK9q
+        clickCount:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 0
+        lastClickedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of the most recent successful redirect; null if never clicked
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request (missing/malformed body or URL that is not absolute http/https). No short link is created.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: No short link exists for the given short code
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Request body Content-Type is not application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'

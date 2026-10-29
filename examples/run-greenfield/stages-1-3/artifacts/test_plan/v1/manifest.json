@@ -1,0 +1,29 @@
+{
+  "type": "test_plan",
+  "version": 1,
+  "produced_by": "T3",
+  "attempt": 1,
+  "created_at": "2026-10-29T17:36:40.227Z",
+  "inputs": [
+    {
+      "type": "spec",
+      "version": 1,
+      "hash": "sha256:e700a079efc8ef51731cc115c5c10f40b03e40ea2bf5c5c1577ee6b2c91ece52"
+    },
+    {
+      "type": "design",
+      "version": 1,
+      "hash": "sha256:c72bfaea3f6ec3e2161085c7320f37027f2f900a794fa8c0bbb652cc23e96336"
+    },
+    {
+      "type": "nfr_plan",
+      "version": 1,
+      "hash": "sha256:30709677c82bc41242af172cde5e2761986444b40b62888370f5d93e45560c31"
+    }
+  ],
+  "files": {
+    "test_plan.json": "sha256:caf686b15a5a725e3a0c03f37588e0e46ca6d7318bea61b3f58a30029ce3075e",
+    "test_plan.md": "sha256:487f434a2f57ae6250dfd68ca6d768e0c4c109d12f3287e3682b7fb3b6bd73b7"
+  },
+  "hash": "sha256:3aab6c97793faed25523d7c51dba96f9e1d0c96a7351fe36fb08ab8815493ad2"
+}

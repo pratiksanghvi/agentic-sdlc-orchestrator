@@ -1,0 +1,201 @@
+[
+  {
+    "id": "T-1",
+    "goal": "Scaffold Maven project: pom.xml (parent 3.5.7, java 21, web, jdbc, sqlite-jdbc, test, boot plugin), ShortenerApplication entry point, ReadyListener printing SERVICE_READY port=<port> on ApplicationReadyEvent, application.properties (PORT, SQLite datasource with pool size 1, sql init always, problemdetails, no stacktrace), schema.sql with approved DDL, .gitignore, and a context-load smoke test using a temp SQLite file.",
+    "files": [
+      {
+        "path": "pom.xml",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/ShortenerApplication.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/ServiceReadyListener.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/resources/application.properties",
+        "action": "create"
+      },
+      {
+        "path": "src/main/resources/schema.sql",
+        "action": "create"
+      },
+      {
+        "path": ".gitignore",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/ShortenerApplicationTests.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [],
+    "traces": [
+      "FR-15"
+    ],
+    "done_criteria": "mvn -B verify compiles, the context loads against a temp SQLite file, schema is applied, and SERVICE_READY port=<port> is printed once on startup."
+  },
+  {
+    "id": "T-2",
+    "goal": "Implement UrlValidator, ShortCodeGenerator, and the exceptions InvalidUrlException and LinkNotFoundException, with unit tests.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/service/UrlValidator.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/service/ShortCodeGenerator.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/service/InvalidUrlException.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/service/LinkNotFoundException.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/service/UrlValidatorTest.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/service/ShortCodeGeneratorTest.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [
+      "T-1"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-8",
+      "FR-9",
+      "FR-10"
+    ],
+    "done_criteria": "Validator accepts only absolute http/https URLs with a host and rejects null, blank, relative, malformed and other-scheme values. Generator yields 7-char base62 codes. Tests pass."
+  },
+  {
+    "id": "T-3",
+    "goal": "Implement ShortLinkRepository (JdbcTemplate insert, findByCode, incrementClick, findLongUrl) with a ShortLink record, ISO-8601 UTC microsecond timestamps, and repository tests on a temp SQLite file.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/persistence/ShortLinkRepository.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/persistence/ShortLinkRecord.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/persistence/ShortLinkRepositoryTest.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [
+      "T-1"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-2",
+      "FR-4",
+      "FR-5",
+      "FR-6",
+      "FR-7",
+      "FR-9",
+      "FR-11",
+      "FR-12",
+      "FR-13"
+    ],
+    "done_criteria": "Insert, duplicate-key surfacing, lookup, and atomic click increment (returning affected rows) work. Tests pass."
+  },
+  {
+    "id": "T-4",
+    "goal": "Implement LinkService: create with up to 5 collision retries, getDetails, getAnalytics, and transactional resolveAndCount, with unit tests.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/service/LinkService.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/service/LinkServiceTest.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [
+      "T-2",
+      "T-3"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-2",
+      "FR-5",
+      "FR-6",
+      "FR-7",
+      "FR-9",
+      "FR-10",
+      "FR-11",
+      "FR-12",
+      "FR-13",
+      "FR-14"
+    ],
+    "done_criteria": "Service creates independent links, retries on collision, increments clicks, throws LinkNotFoundException for unknown codes without changing rows. Tests pass."
+  },
+  {
+    "id": "T-5",
+    "goal": "Implement DTOs, LinkController, RedirectController and ProblemExceptionHandler per the OpenAPI contract, with MockMvc tests covering all endpoints and error statuses.",
+    "files": [
+      {
+        "path": "src/main/java/com/example/shortener/api/CreateLinkRequest.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/ShortLinkResponse.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/LinkAnalyticsResponse.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/LinkController.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/RedirectController.java",
+        "action": "create"
+      },
+      {
+        "path": "src/main/java/com/example/shortener/api/ProblemExceptionHandler.java",
+        "action": "create"
+      },
+      {
+        "path": "src/test/java/com/example/shortener/api/LinkApiTest.java",
+        "action": "create"
+      }
+    ],
+    "depends_on": [
+      "T-4"
+    ],
+    "traces": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-4",
+      "FR-5",
+      "FR-6",
+      "FR-7",
+      "FR-8",
+      "FR-10",
+      "FR-11",
+      "FR-12",
+      "FR-13",
+      "FR-14",
+      "FR-15"
+    ],
+    "done_criteria": "POST returns 201 with Location; the redirect returns 302 with Location and Cache-Control no-store; details and analytics return 200; errors return 400, 404 and 415 as application/problem+json; mvn -B verify passes."
+  }
+]

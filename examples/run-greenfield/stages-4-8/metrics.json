@@ -1,0 +1,78 @@
+{
+  "run_id": "live-impl-2",
+  "status": "completed",
+  "final_verdict": "ACCEPT",
+  "end_to_end_ms": 126528,
+  "time_split_ms": {
+    "human_wait": 0,
+    "tools": 11637,
+    "agent_and_orchestration": 114891
+  },
+  "llm": {
+    "calls": 8,
+    "schema_retries": 0,
+    "failed_calls": 0,
+    "input_tokens": 108062,
+    "output_tokens": 21535,
+    "cost_usd": 0.4315,
+    "per_stage": {
+      "implementation": {
+        "calls": 6.0,
+        "input_tokens": 77115.0,
+        "output_tokens": 18248.0,
+        "cost_usd": 0.3367,
+        "first_attempts": 6.0,
+        "first_attempt_ok": 6.0,
+        "first_pass_rate": 1.0,
+        "latency_p50_ms": 12122,
+        "latency_p95_ms": 32607
+      },
+      "verify": {
+        "calls": 1.0,
+        "input_tokens": 27659.0,
+        "output_tokens": 1578.0,
+        "cost_usd": 0.0711,
+        "first_attempts": 1.0,
+        "first_attempt_ok": 1.0,
+        "first_pass_rate": 1.0,
+        "latency_p50_ms": 9053,
+        "latency_p95_ms": 9053
+      },
+      "docs": {
+        "calls": 1.0,
+        "input_tokens": 3288.0,
+        "output_tokens": 1709.0,
+        "cost_usd": 0.0237,
+        "first_attempts": 1.0,
+        "first_attempt_ok": 1.0,
+        "first_pass_rate": 1.0,
+        "latency_p50_ms": 10853,
+        "latency_p95_ms": 10853
+      }
+    }
+  },
+  "reliability": {
+    "step_retries": 0,
+    "task_attempts_failed": 0,
+    "verification_attempts": 2,
+    "fixes": 1,
+    "rollbacks": 0,
+    "mttr_ms": 14108,
+    "mttr_auto_only_ms": 14108
+  },
+  "gates": {
+    "seed:spec": {
+      "APPROVE": 1
+    },
+    "seed:stack_adr": {
+      "APPROVE": 1
+    },
+    "seed:design": {
+      "APPROVE": 1
+    },
+    "seed:test_plan": {
+      "APPROVE": 1
+    }
+  },
+  "audit_chain_intact": true
+}

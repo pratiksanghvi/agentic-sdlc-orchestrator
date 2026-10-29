@@ -1,0 +1,16 @@
+9c09395 (HEAD -> master, tag: v0.1.0) Release v0.1.0 (live-impl-2)
+5b1be32 (run/live-impl-2) docs: README and API reference
+a90520f fix attempt 1: build
+0530b68 T-5: Implement DTOs, LinkController, RedirectController and ProblemExceptionHandler per the OpenAPI contract, with MockMvc tests covering all endpoints and error statuses.
+9ee82ba T-4: Implement LinkService: create with up to 5 collision retries, getDetails, getAnalytics, and transactional resolveAndCount, with unit tests.
+0067242 T-3: Implement ShortLinkRepository (JdbcTemplate insert, findByCode, incrementClick, findLongUrl) with a ShortLink record, ISO-8601 UTC microsecond timestamps, and repository tests on a temp SQLite file.
+7babfb0 T-2: Implement UrlValidator, ShortCodeGenerator, and the exceptions InvalidUrlException and LinkNotFoundException, with unit tests.
+755343c T-1: Scaffold Maven project: pom.xml (parent 3.5.7, java 21, web, jdbc, sqlite-jdbc, test, boot plugin), ShortenerApplication entry point, ReadyListener printing SERVICE_READY port=<port> on ApplicationReadyEvent, application.properties (PORT, SQLite datasource with pool size 1, sql init always, problemdetails, no stacktrace), schema.sql with approved DDL, .gitignore, and a context-load smoke test using a temp SQLite file.
+0666c4f (run/live-impl-1, failed/live-impl-1) fix attempt 3: acceptance
+d95a4c5 fix attempt 1: build
+01e85af T-5: Implement the API layer: DTO records, LinkController, RedirectController (302, Location, Cache-Control no-store), and ProblemExceptionHandler producing RFC 7807 problem+json for 400/404/415/500, with MockMvc tests covering all endpoints and error paths.
+b2742d3 T-4: Implement LinkService (create with up to 5 collision retries, getDetails, getAnalytics, transactional resolveAndCount) with unit tests.
+3fd6688 T-3: Implement ShortLinkRepository with JdbcTemplate: insert (DuplicateKeyException on collision), findByCode, incrementClick; ISO-8601 UTC microsecond timestamps; a ShortLink record model; repository tests against a temp SQLite file.
+740fc9f T-2: Implement the domain helpers: UrlValidator, ShortCodeGenerator (7-char base62 via SecureRandom), InvalidUrlException and LinkNotFoundException, with unit tests.
+044a384 T-1: Scaffold Maven project: pom.xml (parent 3.5.7, java 21, web, jdbc, sqlite-jdbc, test, spring-boot-maven-plugin), ShortenerApplication entry point, ReadyListener printing SERVICE_READY port=<port> on ApplicationReadyEvent, application.properties (PORT, SQLite datasource with pool size 1, sql init always, problemdetails, no stacktrace), schema.sql, .gitignore, and a context-load smoke test using a temp SQLite file.
+7f3a2b9 (tag: pre-impl/live-impl-2, tag: pre-impl/live-impl-1) Initialize product repository

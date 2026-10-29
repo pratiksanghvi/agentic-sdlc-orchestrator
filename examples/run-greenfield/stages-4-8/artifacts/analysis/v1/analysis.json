@@ -1,0 +1,136 @@
+{
+  "intent": "Build a URL shortener service that exposes core APIs for shortening and resolving URLs, records analytics on link usage, and includes unspecified reliability features.",
+  "functional_needs": [
+    {
+      "statement": "The service shortens URLs: a client submits a long URL and receives a short link that resolves back to the original URL (exact operations to be confirmed in Q-2).",
+      "source_quote": "URL shortener service"
+    },
+    {
+      "statement": "The service exposes a set of core APIs for the URL shortener. The exact operations are not specified (see Q-2).",
+      "source_quote": "core APIs"
+    },
+    {
+      "statement": "The service provides analytics on short-link usage, retrievable through the API. The data captured and exposed is not specified (see Q-3).",
+      "source_quote": "analytics"
+    }
+  ],
+  "nfr_asks": [
+    {
+      "text": "Unspecified reliability features. Too vague to map to a catalog entry.",
+      "source_quote": "reliability features",
+      "category": "other",
+      "classification": "VAGUE",
+      "catalog_id": null
+    }
+  ],
+  "ambiguities": [
+    {
+      "id": "Q-1",
+      "question": "Which catalog capability does 'reliability features' refer to: per-client rate limiting on write endpoints (RL-BASIC), contract-based input validation with problem+json errors (SEC-INPUT), Prometheus request metrics at /metrics (OBS-METRICS), or none? Other reliability concerns, such as uptime, failover or durability guarantees, cannot be built or validated.",
+      "why_it_matters": "Each option adds different externally visible behavior, such as 429 responses, 400 problem+json errors or a /metrics endpoint. Guessing would add an NFR the user did not clearly ask for.",
+      "recommended_default": "none (no NFR is added until the user picks one or more catalog entries)",
+      "severity": "BLOCKING",
+      "options": [
+        "RL-BASIC",
+        "SEC-INPUT",
+        "OBS-METRICS",
+        "none"
+      ]
+    },
+    {
+      "id": "Q-2",
+      "question": "Which operations make up the 'core APIs'?",
+      "why_it_matters": "This defines the externally visible API surface and which operations the system must support.",
+      "recommended_default": "Create a short link from a long URL, redirect from the short code to the original URL, and retrieve a short link's details",
+      "severity": "BLOCKING",
+      "options": [
+        "Create + redirect only",
+        "Create + redirect + get link details",
+        "Create + redirect + get details + delete",
+        "Create + redirect + get details + delete + list all links"
+      ]
+    },
+    {
+      "id": "Q-3",
+      "question": "What should 'analytics' capture and expose for each short link?",
+      "why_it_matters": "This determines what data is stored per redirect, including possibly personal data such as IP addresses. It also determines what the analytics API returns.",
+      "recommended_default": "Total click count per short link, plus the timestamp of the last click, exposed via an API call for that link",
+      "severity": "BLOCKING",
+      "options": [
+        "Total click count only",
+        "Click count + last accessed timestamp",
+        "Per-click events (timestamp, referrer, user agent)",
+        "Per-click events including client IP / geolocation"
+      ]
+    },
+    {
+      "id": "Q-4",
+      "question": "Can clients choose a custom alias for the short code, or are codes always system-generated?",
+      "why_it_matters": "This changes the create-request shape. It also adds a conflict case when an alias is already taken.",
+      "recommended_default": "System-generated codes only",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "System-generated only",
+        "Optional custom alias, rejected if already taken"
+      ]
+    },
+    {
+      "id": "Q-5",
+      "question": "Do short links expire?",
+      "why_it_matters": "Expiration affects redirect behavior after a deadline and adds a field to stored link data.",
+      "recommended_default": "Links never expire",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Never expire",
+        "Optional expiry time set at creation; expired links return not found/gone"
+      ]
+    },
+    {
+      "id": "Q-6",
+      "question": "If the same long URL is submitted twice, should the service return the existing short link or create a new one?",
+      "why_it_matters": "This affects create-endpoint responses and how analytics are split across links.",
+      "recommended_default": "Create a new short link each time",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Create a new short link each time",
+        "Return the existing short link for an identical long URL"
+      ]
+    },
+    {
+      "id": "Q-7",
+      "question": "Which redirect status should resolving a short link return?",
+      "why_it_matters": "A permanent redirect (301) can be cached by browsers, so repeat clicks may not reach the service. That reduces the accuracy of click analytics.",
+      "recommended_default": "302 temporary redirect",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "302 Found (temporary)",
+        "301 Moved Permanently",
+        "307 Temporary Redirect"
+      ]
+    },
+    {
+      "id": "Q-8",
+      "question": "Which long URLs are accepted when creating a short link?",
+      "why_it_matters": "This defines validation behavior and the error responses for rejected input.",
+      "recommended_default": "Only absolute http and https URLs; anything else is rejected as invalid input",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Absolute http/https URLs only",
+        "Any syntactically valid absolute URI"
+      ]
+    },
+    {
+      "id": "Q-9",
+      "question": "Are short links owned by individual users, or is the service anonymous, with anyone able to create, view and manage links?",
+      "why_it_matters": "Ownership changes who can see analytics or manage links. Authentication was not requested and is not in the catalog.",
+      "recommended_default": "Anonymous: no user ownership or authentication",
+      "severity": "NON_BLOCKING",
+      "options": [
+        "Anonymous / no ownership",
+        "Links owned by users (would require authentication, which is not in the catalog)"
+      ]
+    }
+  ],
+  "out_of_scope": [],
+  "stack_constraint": null
+}
