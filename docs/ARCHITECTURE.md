@@ -80,9 +80,9 @@ Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2**, **S1 ‖ S4**
 
 | Gate | Options | Status |
 |---|---|---|
-| R3 Clarify (only if blocking ambiguities) | Answer each question or accept the suggested default; max 2 rounds, then remaining items become flagged assumptions | 🔨 M2 |
+| R3 Clarify (only if blocking ambiguities) | Answer each question (number, own text, or Enter for the suggested default); max 2 rounds, then remaining items become flagged assumptions | ✅ M2 |
 | R3b Ideas loop (propose new requirement ideas, unlimited rounds) | accept / reject / modify / more / done | ✂️ |
-| R6 Spec approval | approve / reject + feedback / end run | 🔨 M2 (edit ✂️) |
+| R6 Spec approval | approve / reject + feedback / end run | ✅ M2 (edit ✂️) |
 | Stack approval (after D2) | approve / choose another supported stack / reject + feedback / end run | 🔨 M3 |
 | D6 Design approval | approve / reject → D3 or D4 + feedback / end run | 🔨 M3 (edit ✂️) |
 | T4 Test-plan approval | approve / reject + feedback / end run | 🔨 M4 (modify/remove/suggest ✂️) |
@@ -99,18 +99,19 @@ Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2**, **S1 ‖ S4**
 ### Stage 1 — Requirements
 
 Turns a raw requirement into an approved spec with numbered, testable acceptance criteria. Does **not** choose technology.
+Implementation: `stages/requirements/` (graph, prompts, schemas, deterministic rules, rendering); human pauses use LangGraph `interrupt()` and are answered by `runtime/driver.py` through `HumanGate`; run state is checkpointed in SQLite per run.
 
 | Step | Type | Behavior | Status |
 |---|---|---|---|
-| R1 Intake | code | Reject empty / > `input.max_bytes`; secret + PII scan; hash input; log verbatim | 🔨 M2 |
-| R2 Analyze | LLM | Intent; explicit FR/NFR with source quotes; ambiguities classified BLOCKING / NON_BLOCKING with recommended defaults; out of scope; NFR classification (supported / unsupported category / vague / not mentioned) | 🔨 M2 |
-| R3 Clarify | human | Only when BLOCKING items exist; vague in-category NFR asks become blocking questions offering catalog options | 🔨 M2 |
-| R4 Normalize | LLM | FR-n / NFR-n with priority MVP/LATER and source; AC-n.m in Given/When/Then with verification method; assumptions; out of scope; `not_supported[]` | 🔨 M2 |
-| R5 Validate | code | Schema; every MVP FR has ≥1 AC; unique IDs; no tech-stack terms; **every NFR maps to a catalog ID, is in a supported category, has source explicit/clarification, and its `source_quote` literally appears in the input or clarification answers** | 🔨 M2 |
+| R1 Intake | code | Reject empty / > `input.max_bytes`; secret + PII scan; hash input; log verbatim | ✅ M2 |
+| R2 Analyze | LLM | Intent; explicit FR/NFR with source quotes; ambiguities classified BLOCKING / NON_BLOCKING with recommended defaults; out of scope; NFR classification (supported / unsupported category / vague / not mentioned) | ✅ M2 |
+| R3 Clarify | human | Only when BLOCKING items exist; vague in-category NFR asks become blocking questions offering catalog options | ✅ M2 |
+| R4 Normalize | LLM | FR-n / NFR-n with priority MVP/LATER and source; AC-n.m in Given/When/Then with verification method; assumptions; out of scope; `not_supported[]` | ✅ M2 |
+| R5 Validate | code | Schema; every MVP FR has ≥1 AC; unique IDs; no tech-stack terms; **every NFR maps to a catalog ID, is in a supported category, has source explicit/clarification, and its `source_quote` literally appears in the input or clarification answers** | ✅ M2 |
 | R5 Critic | LLM | Coverage / invention / testability / conflict review | ✂️ |
-| R6 Gate | human | Approve freezes the spec version and binds the approval to its hash | 🔨 M2 |
+| R6 Gate | human | Approve freezes the spec version and binds the approval to its hash | ✅ M2 |
 
-**NFR rules** (all 🔨 M2):
+**NFR rules** (all ✅ M2):
 1. NFRs are captured in Requirements, not Design.
 2. Supported categories: **rate limit, security, observability (logging + metrics)**.
 3. Asks outside these categories — or inside them but not in the catalog (e.g. encryption at rest, OAuth2) — receive a fixed, polite template response, are listed as *Not supported in MVP*, and the run continues.
@@ -211,7 +212,7 @@ The report is shown for awareness; the run continues automatically. If a scanner
 
 ## 6. Cross-cutting design
 
-### 6.1 Versioned artifacts and approvals (foundations F1–F3) — F1, F2 ✅ M1; F3 🔨 M2
+### 6.1 Versioned artifacts and approvals (foundations F1–F3) — F1, F2 ✅ M1; F3 ✅ M2 (stages are subgraphs with shared `StageIO` input/output schemas and private working state)
 
 * **F1 Versioned artifacts.** Every write creates `<type>/v<n>/` holding the complete file set plus an immutable `manifest.json` (type, version, producing step, attempt, timestamp, input references with hashes, per-file SHA-256, version hash). Retries and rejected drafts are versions too. JSON is hashed in canonical form. Status (DRAFT / APPROVED / REJECTED / SUPERSEDED) is recorded as events, not in the manifest.
 * **F2 Approvals bound to hashes.** An approval records gate, artifact type, version, hash, approver, time. A stage's entry check re-hashes its inputs and requires a matching approval.
@@ -231,7 +232,7 @@ The report is shown for awareness; the run continues automatically. If a scanner
 
 | Guardrail | Where | Status |
 |---|---|---|
-| Input size, secret/PII scan, untrusted-data framing in prompts | R1, all prompts | 🔨 M2 |
+| Input size, secret/PII scan, untrusted-data framing in prompts | R1, all prompts | ✅ M2 |
 | Schema validation of every model output + bounded schema retries (truncated output retried with doubled `max_tokens`) | LLM client | ✅ M1 |
 | Stack allowlist, catalog-only NFRs, `source_quote` check, SQLite only | R5, D2, D3 | 🔨 M2–M3 |
 | Path allowlist, forbidden acceptance-test paths, startup contract, no suppression comments | Stage 4 | 🔨 M5 |
@@ -275,7 +276,7 @@ Point the orchestrator at an existing product repository (for the demo: the acce
 | Scenario | How it is exercised | Status |
 |---|---|---|
 | Greenfield | Loose requirement → new Java URL shortener v0.1.0 | 🔨 M2–M8 |
-| Ambiguous | Vague requirement → R2 classifies blocking ambiguities → R3 clarification → assumptions logged → approval | 🔨 M2 (no extra build) |
+| Ambiguous | Vague requirement → R2 classifies blocking ambiguities → R3 clarification → assumptions logged → approval | ✅ M2 (no extra build) |
 | Brownfield | Enhancement request against the accepted v0.1.0 → impact analysis → v0.2.0 | 🔨 M10 |
 
 ---

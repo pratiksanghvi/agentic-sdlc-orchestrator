@@ -33,6 +33,15 @@ cp config/application.example.properties config/application.properties
 
 Tests use a fake LLM and need no API key.
 
+## Run
+
+```bash
+.venv/bin/orchestrator run --requirement examples/requirements/greenfield-url-shortener.txt
+.venv/bin/orchestrator verify-log <run_id>
+```
+
+Each run writes `runs/<run_id>/` (gitignored): versioned artifacts, the hash-chained audit log `logs/events.jsonl`, and LangGraph checkpoints.
+
 ## Status
 
 Built milestone by milestone; see the status marks in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -41,7 +50,8 @@ Built milestone by milestone; see the status marks in [docs/ARCHITECTURE.md](doc
 |---|---|---|
 | M0 | Skeleton, config loading + validation, CI | ✅ |
 | M1 | Foundations: versioned artifacts, hash-chained event log, traced LLM client, human gates, cost ceiling | ✅ |
-| M2–M4 | Requirements, Design, Test Design stages | 🔨 |
+| M2 | Requirements stage (intake guardrail, analysis, clarification, spec, deterministic validation, approval gate) | ✅ |
+| M3–M4 | Design, Test Design stages | 🔨 |
 | M5–M6 | Implementation ‖ acceptance-test code, Build & Verify with fix loop | 🔨 |
 | M7–M8 | Security report, docs, release verdict, metrics | 🔨 |
 | M10 | Brownfield | 🔨 |
