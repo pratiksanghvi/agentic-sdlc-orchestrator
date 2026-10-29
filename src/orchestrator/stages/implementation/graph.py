@@ -23,6 +23,7 @@ from orchestrator.execution import runner
 from orchestrator.execution.git_ops import ProductRepo
 from orchestrator.guardrails import code as code_guard
 from orchestrator.guardrails.secrets import scan_files
+from orchestrator.llm.client import LLMError
 from orchestrator.observability.node import observed_node
 from orchestrator.runtime.context import get_context
 from orchestrator.stages.common import (
@@ -255,15 +256,20 @@ def i4_task(state: ImplementationState) -> dict[str, Any]:
     roles = ["coding"] * (budgets.step_retries + 1) + ["fallback"] * budgets.stronger_model_attempts
     errors = state.get("errors") or ""
     for attempt, role in enumerate(roles, 1):
-        result = ctx.llm.structured(
-            stage=STAGE, node="I4_task", purpose=f"implementation.task.{task['id']}",
-            system=_system(ctx, state),
-            user=prompt(STAGE, "task", **inputs, plan=to_json(plan),
-                        tree="\n".join(_tree(ws)) or "empty",
-                        existing=_existing_context(ws, task, plan), task=to_json(task),
-                        errors=errors or "none", hint=state.get("hint") or "none"),
-            schema=FileWrites, role=role, effort="medium", max_tokens=32000,
-        )
+        try:
+            result = ctx.llm.structured(
+                stage=STAGE, node="I4_task", purpose=f"implementation.task.{task['id']}",
+                system=_system(ctx, state),
+                user=prompt(STAGE, "task", **inputs, plan=to_json(plan),
+                            tree="\n".join(_tree(ws)) or "empty",
+                            existing=_existing_context(ws, task, plan), task=to_json(task),
+                            errors=errors or "none", hint=state.get("hint") or "none"),
+                schema=FileWrites, role=role, effort="medium", max_tokens=32000,
+            )
+        except LLMError as exc:  # e.g. API unavailable or out of credit: hand to the human
+            ctx.log.append("event", "task_attempt_failed", stage=STAGE, task=task["id"],
+                           attempt=attempt, role=role, problems=[str(exc)[:500]])
+            return {"task_failed": True, "errors": f"model call failed: {exc}"}
         problems = _apply_and_check(ctx, state, ws, result.value, stack)
         if not problems:
             commit = repo.commit_all(f"{task['id']}: {task['goal']}\n\nRun: {ctx.run_id}\n"

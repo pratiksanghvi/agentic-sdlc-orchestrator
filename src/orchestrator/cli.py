@@ -71,6 +71,12 @@ def _run(root: Path, config, requirement: str, product: Path | None = None) -> i
     except KeyboardInterrupt:
         console.print("\n[yellow]Paused.[/] Run state is checkpointed in the run folder.")
         return 130
+    except Exception as exc:  # safe stop: never leave the user with a raw traceback
+        reason = f"{type(exc).__name__}: {str(exc)[:500]}"
+        ctx.log.append("event", "safe_stop", reason=reason)
+        console.print(f"[red]Run {ctx.run_id} stopped safely:[/] {reason}")
+        console.print(f"  Evidence: {ctx.log.path}  ·  orchestrator trace {ctx.run_id}")
+        return 4
     status = result.get("status", "running")
     color = {"failed": "red", "ended": "yellow"}.get(status, "green")
     console.print(f"[{color}]Run {ctx.run_id}: {status}[/] {result.get('status_reason', '')}")
