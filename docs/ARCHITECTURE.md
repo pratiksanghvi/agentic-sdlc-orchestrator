@@ -63,6 +63,7 @@ Every design item below carries a status so reviewers can see exactly what is bu
 ## 4. Lifecycle overview
 
 ```
+0 Codebase       (brownfield only) snapshot → impact analysis → [HUMAN approve]
 1 Requirements   R1 intake → R2 analyze → R3 clarify ⟲ → R4 spec → R5 validate → [HUMAN approve]
 2 Design         D1 entry → D2 stack → [HUMAN stack] → D3 NFR lookup → D4 architecture → D5 validate → [HUMAN design]
 3 Test Design    T1 NFR cases ‖ T2 functional cases → T3 validate → [HUMAN approve] → freeze
@@ -263,7 +264,7 @@ The generated product lives in its own git repository under `workspaces/<name>/`
 |---|---|
 | Gate reject loops back to the producing step with feedback | ✅ M2–M4 |
 | Final REJECT → user picks restart stage; downstream re-runs on new versions with fresh approvals (feedback carry-forward ⏸️) | ✅ M8 |
-| Detection of edits made outside the orchestrator (re-approve or discard) | ⏸️ |
+| Detection of edits made outside the orchestrator: stage entry checks block consumption of a changed approved artifact (✅); re-approve-or-discard choice (⏸️) | ✅ / ⏸️ |
 | NEW_REQUIREMENT routing from test suggestions; carrying rejected ideas across re-plans; counting re-plans in metrics | ⏸️ |
 | Principle: agents never re-plan autonomously | ⏸️ (proposed) |
 | Selective re-run of only the components traced to a changed requirement | 🔭 |
@@ -272,9 +273,9 @@ The generated product lives in its own git repository under `workspaces/<name>/`
 
 Resume after shutdown (LangGraph SQLite checkpointer, `runs list` / `resume`, re-running only the interrupted step, integrity re-hash on resume, one active run per workspace), the exact on-disk artifact layout, and the full "end run" handling (where it is offered, mandatory reason, run-ended report) are designed in outline but parked as open questions. Ctrl+C pauses a run; the checkpointer is in place, but the resume UX is not part of this delivery.
 
-### 6.7 Brownfield — 🔨 M10
+### 6.7 Brownfield — ✅ M10
 
-Point the orchestrator at an existing product repository (for the demo: the accepted v0.1.0 URL shortener). A **codebase snapshot + impact analysis** step (code inventory, then an LLM pass identifying impacted modules, endpoints, tables and data flows) feeds Requirements and Design as additional approved inputs. The rest of the pipeline is reused unchanged (F3); the run works on a new branch of the same product repo and releases the next version.
+`orchestrator run --requirement <change> --product <repo>`. Implementation: `stages/codebase/` (Stage 0, skipped for greenfield). Point the orchestrator at an existing product repository (for the demo: the accepted v0.1.0 URL shortener). The snapshot is bounded (100 files / 150 KB; over budget is refused, never silently truncated) and the stack is detected from build files and kept (enforced at D2). A **codebase snapshot + impact analysis** step (code inventory, then an LLM pass identifying impacted modules, endpoints, tables and data flows) feeds Requirements and Design as additional approved inputs. The rest of the pipeline is reused unchanged (F3); the run works on a new branch of the same product repo and releases the next version.
 
 ---
 
@@ -282,9 +283,9 @@ Point the orchestrator at an existing product repository (for the demo: the acce
 
 | Scenario | How it is exercised | Status |
 |---|---|---|
-| Greenfield | Loose requirement → new Java URL shortener v0.1.0 | 🔨 M2–M8 |
+| Greenfield | Loose requirement → new Java URL shortener v0.1.0 | ✅ M2–M8 (live: 24/24 acceptance, accepted) |
 | Ambiguous | Vague requirement → R2 classifies blocking ambiguities → R3 clarification → assumptions logged → approval | ✅ M2 (no extra build) |
-| Brownfield | Enhancement request against the accepted v0.1.0 → impact analysis → v0.2.0 | 🔨 M10 |
+| Brownfield | Enhancement request against the accepted v0.1.0 → Stage 0 impact analysis (approved) → only new/changed requirements → complete OpenAPI incl. existing endpoints → modify-not-scaffold tasks → v0.2.0 | ✅ M10 |
 
 ---
 

@@ -1,0 +1,1 @@
+Add optional link expiry: when creating a short link the client may give an expiry in days. After it expires, the redirect returns 410 Gone instead of redirecting. Links without an expiry never expire.
