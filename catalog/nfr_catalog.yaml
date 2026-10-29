@@ -1,0 +1,39 @@
+# Bounded catalog of non-functional requirements the orchestrator can build AND validate.
+# NFRs are built only when the user asks for them (never from assumptions).
+# Supported categories in the MVP: rate_limit, security, observability (logging + metrics).
+# Validation recipes are black-box HTTP checks against the running service, so they are stack-agnostic.
+
+supported_categories: [rate_limit, security, observability]
+
+entries:
+  RL-BASIC:
+    category: rate_limit
+    capability: Limit requests per client on the named write endpoints.
+    params:
+      limit: {type: int, default: 60}
+      window_seconds: {type: int, default: 60}
+      endpoints: {type: list, default: all_write}
+      key: {type: str, default: client_ip}
+    implementation:
+      java21-springboot3-maven: Bucket4j in-memory bucket per client IP in a servlet filter; 429 with Retry-After header.
+    validation: Send limit+1 requests to one rate-limited endpoint; the last must return 429 with a Retry-After header.
+
+  SEC-INPUT:
+    category: security
+    capability: Every request is validated against the OpenAPI contract; errors use RFC 7807 problem+json and never expose stack traces.
+    params:
+      max_body_bytes: {type: int, default: 65536}
+    implementation:
+      java21-springboot3-maven: Bean Validation on request DTOs + @RestControllerAdvice mapping to ProblemDetail; server.error.include-stacktrace=never.
+    validation: For every operation with a request body send (a) missing required field, (b) wrong type, (c) oversized body; each must return 400 application/problem+json without a stack trace.
+
+  OBS-METRICS:
+    category: observability
+    capability: Request count and latency metrics for every endpoint, exposed in Prometheus format at /metrics.
+    params: {}
+    implementation:
+      java21-springboot3-maven: Actuator + micrometer-registry-prometheus, exposed at /metrics (management.endpoints.web.base-path=/, path-mapping.prometheus=metrics).
+    validation: Call any endpoint, then GET /metrics must contain http_server_requests_seconds with that route's uri tag.
+
+# Designed but not in the deadline MVP (see docs/ARCHITECTURE.md):
+#   SEC-APIKEY (API key auth on named endpoints), OBS-LOGS (JSON logs + correlation ID)

@@ -1,0 +1,40 @@
+# Governance policy. Committed and reviewed; its hash is recorded on every run.
+
+input:
+  max_bytes: 20480            # R1: reject oversized requirements
+
+llm:
+  schema_retries: 2           # re-ask when structured output fails validation
+  max_tokens: 16000
+  request_timeout_s: 600
+
+budgets:
+  step_retries: 2             # per-step retries before the stronger-model attempt
+  stronger_model_attempts: 1
+  verify_auto_fixes: 3        # Stage 5 shared automatic fix budget
+  clarification_rounds: 2     # R3 max rounds before remaining items become assumptions
+  cost_usd_confirm: 5.00      # pause and ask the human when a run's estimated cost reaches this
+
+timeouts:
+  compile_s: 600
+  build_s: 600
+  test_s: 600
+  startup_s: 90
+  acceptance_s: 600
+
+contract:
+  port_env: PORT
+  ready_line_regex: '^SERVICE_READY port=(\d+)$'
+  startup_error_regex: '(Exception|panic:|Traceback|ERROR)'
+
+paths:
+  # Implementation agent may never write here (acceptance tests live outside the product repo)
+  forbidden:
+    - "**/acceptance/**"
+    - ".git/**"
+
+gates:
+  min_reason_chars: 10        # required reason for reject / end run
+
+semgrep:
+  report_severities: [ERROR, WARNING]

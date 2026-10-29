@@ -1,0 +1,23 @@
+# Secrets and user-specific config — never commit
+config/application.properties
+.env
+*.key
+
+# Run data (logs contain full prompts/responses) and generated product workspaces
+runs/
+workspaces/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

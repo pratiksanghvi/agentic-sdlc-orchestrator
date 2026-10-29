@@ -1,0 +1,61 @@
+# Supported target stacks for generated services.
+# `validated: true` means a full end-to-end run has passed with this stack.
+
+stacks:
+  java21-springboot3-maven:
+    validated: true
+    language: java
+    datastore: sqlite
+    commands:
+      compile: ["mvn", "-q", "-B", "compile"]
+      build_and_unit_test: ["mvn", "-q", "-B", "verify"]
+      run: ["sh", "-c", "java -jar target/*.jar"]
+    path_allowlist:
+      - "pom.xml"
+      - "src/main/**"
+      - "src/test/**"
+      - "README.md"
+      - "docs/**"
+      - "CHANGELOG.md"
+      - ".gitignore"
+    dependencies:   # groupId:artifactId -> allowed version
+      org.springframework.boot:spring-boot-starter-parent: "3.5.7"
+      org.springframework.boot:spring-boot-starter-web: managed
+      org.springframework.boot:spring-boot-starter-validation: managed
+      org.springframework.boot:spring-boot-starter-jdbc: managed
+      org.springframework.boot:spring-boot-starter-actuator: managed
+      org.springframework.boot:spring-boot-starter-test: managed
+      org.springframework.boot:spring-boot-maven-plugin: managed
+      io.micrometer:micrometer-registry-prometheus: managed
+      org.xerial:sqlite-jdbc: "3.50.3.0"
+      com.bucket4j:bucket4j_jdk17-core: "8.14.0"
+
+  python312-fastapi:
+    validated: false
+    language: python
+    datastore: sqlite
+    commands:
+      compile: ["python", "-m", "compileall", "-q", "."]
+      build_and_unit_test: ["python", "-m", "pytest", "-q"]
+      run: ["python", "-m", "app"]
+    path_allowlist: ["app/**", "tests/**", "requirements.txt", "README.md", "docs/**"]
+    dependencies:
+      fastapi: "0.120.0"
+      uvicorn: "0.38.0"
+      slowapi: "0.1.9"
+      prometheus-client: "0.23.1"
+
+  go122-chi:
+    validated: false
+    language: go
+    datastore: sqlite
+    commands:
+      compile: ["go", "build", "./..."]
+      build_and_unit_test: ["go", "test", "./..."]
+      run: ["go", "run", "."]
+    path_allowlist: ["*.go", "**/*.go", "go.mod", "go.sum", "README.md", "docs/**"]
+    dependencies:
+      github.com/go-chi/chi/v5: "v5.2.3"
+      golang.org/x/time: "v0.14.0"
+      github.com/prometheus/client_golang: "v1.23.2"
+      modernc.org/sqlite: "v1.40.0"
