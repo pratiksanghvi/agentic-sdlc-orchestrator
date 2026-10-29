@@ -38,10 +38,10 @@ Every design item below carries a status so reviewers can see exactly what is bu
 | Concern | Choice | Status |
 |---|---|---|
 | Orchestration | Python 3.12 + **LangGraph** (stateful graph, subgraphs, parallel branches, `interrupt()` human gates, SQLite checkpointer) | 🔨 M1+ |
-| LLM | Anthropic Claude via official Python SDK — `claude-opus-5-5` (reasoning stages + fallback), `claude-sonnet-5-5` (code generation); configurable | 🔨 M1 |
-| Structured output | Model output validated against Pydantic schemas (structured outputs; forced `tool_choice` is not supported on current models, so schema-constrained output is used instead) | 🔨 M1 |
+| LLM | Anthropic Claude via official Python SDK (streaming) — `claude-opus-5-5` (reasoning stages + fallback), `claude-sonnet-5-5` (code generation); configurable | ✅ M1 |
+| Structured output | `output_config.format` JSON schema generated from Pydantic models (objects closed, all fields required, value constraints enforced afterwards by Pydantic + semantic validators). Forced `tool_choice` is not supported on current models, so schema-constrained output is used instead | ✅ M1 |
 | Config validation | Pydantic models for every config file | ✅ M0 |
-| Console UI | `rich` | 🔨 M1 |
+| Console UI | `rich` | ✅ M1 (gates); live view 🔨 M8 |
 | Secret scanning | `detect-secrets` (pip) | 🔨 M1/M7 |
 | Generated service stacks | Java 21 + Spring Boot 3 + Maven + SQLite (**validated**); Python/FastAPI and Go/chi configured | Java 🔨 M5–M6; Python/Go ✂️ |
 | Acceptance tests | Black-box **pytest + httpx** against the running service (stack-agnostic) | 🔨 M5–M6 |
@@ -58,7 +58,7 @@ Every design item below carries a status so reviewers can see exactly what is bu
 | `catalog/nfr_catalog.yaml` | Yes | Bounded NFR catalog: capability, params, per-stack implementation, validation recipe | ✅ M0 |
 
 * All files are validated at startup (`orchestrator check-config`); invalid config **refuses to start**. ✅ M0
-* SHA-256 of `policy.yaml`, `stacks.yaml`, `nfr_catalog.yaml` are computed at load and recorded on every run, so the audit shows which rules governed it. ✅ M0 (hashing) / 🔨 M1 (recorded per run)
+* SHA-256 of `policy.yaml`, `stacks.yaml`, `nfr_catalog.yaml` are computed at load and recorded on every run, so the audit shows which rules governed it. ✅ M0 (hashing) / ✅ M1 (recorded in `run_started`)
 
 ## 4. Lifecycle overview
 
@@ -90,7 +90,7 @@ Parallel paths with synchronization: **4a ‖ 4b**, **T1 ‖ T2**, **S1 ‖ S4**
 | Stage 5 escalation | implementation hint / end run (with rollback confirmation) — unlimited tries, one fix + one verify per hint | 🔨 M6 (test-case change ✂️) |
 | Stage 6 missing tool | proceed without the check / stop | 🔨 M7 |
 | Stage 8 final verdict | accept / reject → restart from Requirements, Design or Test Design / end run | 🔨 M8 |
-| Cost ceiling | "Run has used $X. Continue? [y/N]" at `budgets.cost_usd_confirm` ($5) | 🔨 M1 |
+| Cost ceiling | "Run has used $X. Continue? [y/N]" at each multiple of `budgets.cost_usd_confirm` ($5) | ✅ M1 |
 
 ---
 
@@ -211,14 +211,15 @@ The report is shown for awareness; the run continues automatically. If a scanner
 
 ## 6. Cross-cutting design
 
-### 6.1 Versioned artifacts and approvals (foundations F1–F3) — 🔨 M1
+### 6.1 Versioned artifacts and approvals (foundations F1–F3) — F1, F2 ✅ M1; F3 🔨 M2
 
 * **F1 Versioned artifacts.** Every write creates `<type>/v<n>/` holding the complete file set plus an immutable `manifest.json` (type, version, producing step, attempt, timestamp, input references with hashes, per-file SHA-256, version hash). Retries and rejected drafts are versions too. JSON is hashed in canonical form. Status (DRAFT / APPROVED / REJECTED / SUPERSEDED) is recorded as events, not in the manifest.
 * **F2 Approvals bound to hashes.** An approval records gate, artifact type, version, hash, approver, time. A stage's entry check re-hashes its inputs and requires a matching approval.
 * **F3 Restartable stage contracts.** Each stage is a LangGraph subgraph declaring `requires` and `produces`; it reads only approved artifacts via the store and writes only its own outputs; its scratch state is discarded on exit. This makes every stage independently testable and restartable.
 
-### 6.2 Observability — 🔨 M1 (+ M8 for reports)
+### 6.2 Observability — choke points, records, hash chain ✅ M1; metrics + views 🔨 M8
 
+* Implementation: `observability/eventlog.py`, `llm/client.py`, `llm/backends.py`, `human/gate.py`, `observability/node.py`, `artifacts/store.py`, `artifacts/approvals.py`, `runtime/context.py`.
 * **Single choke points:** `TracedAnthropicClient` (only way to call Claude), `HumanGate` (only way to prompt the user), `@observed_node` (every graph step). Tests enforce logged-call count == actual calls.
 * **Records:** LLM call (full system prompt + messages, full response, stop reason, input/output/cache tokens, latency, estimated cost, request ID, schema-retry flag); human interaction (what was shown, options, verbatim answer, response wait); event (node start/finish, input/output hashes, retries, fixes, rollbacks, pause/resume, guardrail violations, re-plans); decision (type, made by human or agent, rationale, basis = LLM call IDs + input hashes).
 * **Storage:** append-only JSONL, full prompts/responses inline; each line carries the hash of the previous line (tamper-evident; `verify-log`). API key never logged; run logs are gitignored.
@@ -231,14 +232,15 @@ The report is shown for awareness; the run continues automatically. If a scanner
 | Guardrail | Where | Status |
 |---|---|---|
 | Input size, secret/PII scan, untrusted-data framing in prompts | R1, all prompts | 🔨 M2 |
-| Schema validation of every model output + bounded schema retries | LLM client | 🔨 M1 |
+| Schema validation of every model output + bounded schema retries (truncated output retried with doubled `max_tokens`) | LLM client | ✅ M1 |
 | Stack allowlist, catalog-only NFRs, `source_quote` check, SQLite only | R5, D2, D3 | 🔨 M2–M3 |
 | Path allowlist, forbidden acceptance-test paths, startup contract, no suppression comments | Stage 4 | 🔨 M5 |
 | Versioned dependency allowlist per stack | Stage 4 | 🔨 M5 |
 | Only commands from `stacks.yaml` may run; timeouts; run inside the workspace | execution | 🔨 M5–M6 |
 | Clean child environment for generated code (no API key / secrets) | execution | 🔨 M6 |
-| Retry budgets, cost ceiling with human confirmation | runtime | 🔨 M1 |
-| Approvals bound to hashes; governance file hashes per run | change control | 🔨 M1 |
+| Cost ceiling with human confirmation (asked at every multiple of the ceiling) | runtime | ✅ M1 |
+| Step retry budgets + stronger-model fallback | stages | 🔨 M2+ |
+| Approvals bound to hashes; governance file hashes per run | change control | ✅ M1 |
 | OS/container sandbox for generated code | | 🔭 |
 
 **Limitation:** generated code runs on the host. Command allowlisting and a clean environment reduce risk but are not process isolation.

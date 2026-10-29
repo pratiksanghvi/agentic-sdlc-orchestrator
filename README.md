@@ -40,7 +40,7 @@ Built milestone by milestone; see the status marks in [docs/ARCHITECTURE.md](doc
 | Milestone | Scope | Status |
 |---|---|---|
 | M0 | Skeleton, config loading + validation, CI | ✅ |
-| M1 | Foundations: versioned artifacts, hash-chained event log, traced LLM client, human gates, cost ceiling | 🔨 |
+| M1 | Foundations: versioned artifacts, hash-chained event log, traced LLM client, human gates, cost ceiling | ✅ |
 | M2–M4 | Requirements, Design, Test Design stages | 🔨 |
 | M5–M6 | Implementation ‖ acceptance-test code, Build & Verify with fix loop | 🔨 |
 | M7–M8 | Security report, docs, release verdict, metrics | 🔨 |
